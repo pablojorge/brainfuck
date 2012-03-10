@@ -59,7 +59,7 @@ Running the Sierpinsky Triangle generator found in the [spanish Wikipedia articl
 
 ### Using the Brainfuck to C translator
 
-Running the same program, but the version tranlated to C:
+Running the same program, but the version translated to C:
 
     $ make bf2c
     ghc --make bf2c -o bf2c
