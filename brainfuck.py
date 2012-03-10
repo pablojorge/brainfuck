@@ -209,8 +209,11 @@ class Interpreter:
             self.program.advance()
 
 if __name__ == "__main__":
-    with open(sys.argv[1], "r") as input_file:
-        contents = input_file.read()
+    if len(sys.argv) > 1:
+        with open(sys.argv[1], "r") as input_file:
+            contents = input_file.read()
+    else:
+        contents = sys.stdin.read()
 
     # Define program
     program = Program(contents)

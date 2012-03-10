@@ -20,16 +20,15 @@ int main(int argc, char *argv[])
     int count = 0;
 
     if (argc < 2) {
-        fprintf(stderr, "Missing filename!\n");
-        exit(1);
-    }
+        fd = STDIN_FILENO;
+    } else {
+        fd = open(argv[1], O_RDONLY);
 
-    fd = open(argv[1], O_RDONLY);
-
-    if(fd < 0){
-        fprintf(stderr, "Error opening %s!\n", argv[1]);
-        perror("open");
-        exit(1);
+        if(fd < 0){
+            fprintf(stderr, "Error opening %s!\n", argv[1]);
+            perror("open");
+            exit(1);
+        }
     }
 
     aux_size = sizeof(program);
@@ -42,8 +41,6 @@ int main(int argc, char *argv[])
         aux_ptr += ret;
         ret = read(fd, aux_ptr, aux_size);
     }
-
-    close(fd);
 
     while (ip < (program + prg_size)) {
         switch(*ip) {
