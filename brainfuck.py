@@ -70,6 +70,8 @@ class StdoutStream:
 
     def put(self, val):
         sys.stdout.write(val)
+        # we want to see partial results before EOLs:
+        sys.stdout.flush()
 
     def get(self):
         raise Exception("invalid")
