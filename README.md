@@ -4,6 +4,7 @@ Some experiments with the [brainfuck language](http://www.muppetlabs.com/~breadb
 
  * brainfuck.py: Interpreter in Python
  * brainfuck.c: Interpreter in C
+ * brainfuck.hs: Interpreter in Haskell
  * bf2c.hs: Translator from brainfuck to C in Haskell
 
 ## Examples
