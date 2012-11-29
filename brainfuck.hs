@@ -1,39 +1,42 @@
 import Data.Char
+import Debug.Trace
 
-alter :: [Char] -> Int -> (Int -> Int) -> [Char]
+alter :: [Int] -> Int -> (Int -> Int) -> [Int]
 alter mem ptr f = pre ++ [value] ++ post
     where pre = take ptr mem
-          value = chr $ f $ ord (mem!!ptr)
+          value = f $ mem!!ptr
           post = drop (ptr+1) mem
 
 increment mem ptr = alter mem ptr (\x -> x+1)
 decrement mem ptr = alter mem ptr (\x -> x-1)
 
--- XXX single function that receives direction, condition, match
-
-loop_start :: [Char] -> [Char] -> Int -> Int -> Int
-loop_start prg mem ip ptr
-    | ord (mem!!ptr) == 0 = find_matching_fwd prg (ip+1) 1
+loop prg mem ip ptr cond advance symbol match
+    | cond (mem!!ptr) = (fmatch (advance ip)) + 1
     | otherwise = ip + 1
-    where find_matching_fwd prg ip count
-            | count == 0 = ip
-            | prg!!ip == '[' = find_matching_fwd prg (ip+1) (count+1)
-            | prg!!ip == ']' = find_matching_fwd prg (ip+1) (count-1)
-            | otherwise = find_matching_fwd prg (ip+1) count
+    where fmatch ip
+            -- | trace (trace_fmatch ip) False = undefined
+            | prg!!ip == symbol = fmatch (advance (fmatch (advance ip)))
+            | prg!!ip == match = ip
+            | otherwise = fmatch (advance ip)
+          trace_fmatch ip =
+            ("fmatch" ++  
+             " ip: " ++ show ip ++ 
+             " prg!!ip: " ++ show (prg!!ip)) 
 
-loop_end :: [Char] -> [Char] -> Int -> Int -> Int
-loop_end prg mem ip ptr
-    | ord (mem!!ptr) > 0 = find_matching_bwd prg (ip-1) 1
-    | otherwise = ip + 1
-    where find_matching_bwd prg ip count
-            | count == 0 = ip
-            | prg!!ip == ']' = find_matching_bwd prg (ip-1) (count+1)
-            | prg!!ip == '[' = find_matching_bwd prg (ip-1) (count-1)
-            | otherwise = find_matching_bwd prg (ip-1) count
+loop_start :: [Char] -> [Int] -> Int -> Int -> Int
+loop_start prg mem ip ptr = loop prg mem ip ptr cond advance '[' ']'
+    where cond = (\x -> x == 0)
+          advance = (\x -> x + 1)
 
-bf :: [Char] -> [Char] -> [Char] -> Int -> Int -> [Char]
+loop_end :: [Char] -> [Int] -> Int -> Int -> Int
+loop_end prg mem ip ptr = loop prg mem ip ptr cond advance ']' '['
+    where cond = (\x -> x > 0)
+          advance = (\x -> x - 1)
+
+bf :: [Char] -> [Int] -> [Char] -> Int -> Int -> [Char]
 bf prg mem output ip ptr
-    -- return current status if we reached the end of the program
+    -- | trace trace_bf False = undefined
+    -- return current output if we reached the end of the program
     | ip >= (length prg) = output
     -- increment/decrement data pointer
     | prg!!ip == '>' = bf prg mem output (ip+1) (ptr+1)
@@ -42,17 +45,40 @@ bf prg mem output ip ptr
     | prg!!ip == '+' = bf prg (increment mem ptr) output (ip+1) ptr
     | prg!!ip == '-' = bf prg (decrement mem ptr) output (ip+1) ptr
     -- input/output byte
-    | prg!!ip == '.' = bf prg mem (output ++ [mem!!ptr]) (ip+1) ptr
+    | prg!!ip == '.' = bf prg mem (output ++ [chr (mem!!ptr)]) (ip+1) ptr
     | prg!!ip == ',' = error "',' not supported" -- XXX support for ','
     -- loops
     | prg!!ip == '[' = bf prg mem output (loop_start prg mem ip ptr) ptr
     | prg!!ip == ']' = bf prg mem output (loop_end prg mem ip ptr) ptr
+    -- just ignore current character
     | otherwise = bf prg mem output (ip+1) ptr
+    where trace_bf = 
+            ("bf" ++ 
+             " ip: " ++ show ip ++ 
+             " symbol: " ++ (showpos prg ip) ++ 
+             " ptr: " ++ show ptr ++
+             " value: " ++ (showpos mem ptr))
+
+-- Tracing
+            
+showpos list pos 
+    | pos >= (length list) = "<OOB>"
+    | otherwise = show (list!!pos)
+
+-- Tests
 
 chr2bf :: Char -> [Char]
 chr2bf c = take (ord c) (repeat '+') ++ ".>"
-hello = concat $ map chr2bf "hello world"
 
+str2bf :: [Char] -> [Char]
+str2bf s = concat $ map chr2bf s
+
+hello = str2bf "hello world"
+
+looptest = "++[>++[-]<-]."
+
+-- Todo
+--
 -- XXX lazy evaluation to see partial results
 -- XXX program name as argument, stdin program input
 --     http://learnyouahaskell.com/input-and-output#files-and-streams
@@ -61,7 +87,7 @@ hello = concat $ map chr2bf "hello world"
 
 interpreter input = show $ bf program mem output ip ptr
     where program = input
-          mem = take 30000 (repeat (chr 0))
+          mem = take 30000 (repeat 0)
           output = []
           ip = 0
           ptr = 0
