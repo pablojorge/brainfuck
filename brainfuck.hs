@@ -1,3 +1,4 @@
+import System.Environment
 import Data.Char
 import Debug.Trace
 
@@ -39,24 +40,35 @@ increment (a,b) = (a, ((head b) + 1) : (tail b))
 decrement :: Memory -> Memory
 decrement (a,b) = (a, ((head b) - 1) : (tail b))
 
-bf :: Program -> Memory -> Stream -> Stream
+outputb :: Stream -> Memory -> Stream
+outputb output mem
+    -- | trace ("outputb " ++ (show (chr (current mem)))) False = undefined
+    | otherwise = output ++ [chr (current mem)]
+
+inputb :: Stream -> Memory -> Memory
+inputb input (a,b) 
+    -- | trace ("inputb " ++ show (head input)) False = undefined
+    | otherwise = (a, (ord (head input)) : (tail b))
+
+bf :: Program -> Memory -> Stream -> Stream -> Stream
 -- return current output if we reached the end of the program
-bf (_,[]) mem output = output
-bf prg mem output
+bf (_,[]) _ _ output = output
+bf _ _ [] output = output
+bf prg mem input output
     -- | trace trace_bf False = undefined
-    | (current prg) == '>' = bf (advance prg) (advance mem) output
-    | (current prg) == '<' = bf (advance prg) (recede mem) output
+    | (current prg) == '>' = bf (advance prg) (advance mem) input output
+    | (current prg) == '<' = bf (advance prg) (recede mem) input output
     -- increment/decrement pointed data
-    | (current prg) == '+' = bf (advance prg) (increment mem) output
-    | (current prg) == '-' = bf (advance prg) (decrement mem) output
+    | (current prg) == '+' = bf (advance prg) (increment mem) input output
+    | (current prg) == '-' = bf (advance prg) (decrement mem) input output
     -- input/output byte
-    | (current prg) == '.' = bf (advance prg) mem (output ++ [chr (current mem)])
-    | (current prg) == ',' = error "',' not supported" -- XXX support for ','
+    | (current prg) == '.' = bf (advance prg) mem input $! outputb output mem
+    | (current prg) == ',' = bf (advance prg) (inputb input mem) (tail input) output
     -- loops
-    | (current prg) == '[' = bf (loop_start prg mem) mem output
-    | (current prg) == ']' = bf (loop_end prg mem) mem output
+    | (current prg) == '[' = bf (loop_start prg mem) mem input output
+    | (current prg) == ']' = bf (loop_end prg mem) mem input output
     -- just ignore current character
-    | otherwise = bf (advance prg) mem output
+    | otherwise = bf (advance prg) mem input output
     where trace_bf = 
             ("bf" ++ 
              " prg: " ++ (show (current prg)) ++ 
@@ -79,13 +91,18 @@ looptest = "++[>++[-]<-]."
 -- Todo
 --
 -- XXX lazy evaluation to see partial results
--- XXX program name as argument, stdin program input
---     http://learnyouahaskell.com/input-and-output#files-and-streams
 -- XXX ASM interpreter?
 
-interpreter input = show $ bf program mem output
-    where program = ([], input)
-          mem = ([], take 30000 (repeat 0))
+interpret program input = show $ bf ([], program) mem input output
+    where mem = ([], take 30000 (repeat 0))
           output = []
 
-main = interact interpreter
+printOutput :: String -> IO()
+printOutput output = putStr output
+
+main = do 
+       (filename:_) <- getArgs
+       program <- readFile filename
+       input <- getContents
+       let output = interpret program input
+       printOutput output
