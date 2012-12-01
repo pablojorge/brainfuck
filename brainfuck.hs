@@ -2,11 +2,16 @@ import System.Environment
 import Data.Char
 import Debug.Trace
 
+-- XXX lazy evaluation to see partial results
+-- XXX ASM interpreter?
+
+-- Data types
 type Operator = Char
 type Program = ([Operator], [Operator])
 type Memory = ([Int], [Int])
 type Stream = [Char]
 
+-- Operations
 loop prg mem cond move symbol match
     | cond (current mem) = advance (fmatch (move prg))
     | otherwise = advance prg
@@ -61,7 +66,7 @@ bf prg mem input output
     -- increment/decrement pointed data
     | (current prg) == '+' = bf (advance prg) (increment mem) input output
     | (current prg) == '-' = bf (advance prg) (decrement mem) input output
-    -- input/output byte
+    -- input/output byte (the $! is to FORCE the evaluation)
     | (current prg) == '.' = bf (advance prg) mem input $! outputb output mem
     | (current prg) == ',' = bf (advance prg) (inputb input mem) (tail input) output
     -- loops
@@ -74,8 +79,6 @@ bf prg mem input output
              " prg: " ++ (show (current prg)) ++ 
              " mem: " ++ (show (current mem)))
 
--- Tracing
-            
 -- Tests
 
 chr2bf :: Char -> [Char]
@@ -88,14 +91,19 @@ hello = str2bf "hello world"
 
 looptest = "++[>++[-]<-]."
 
--- Todo
---
--- XXX lazy evaluation to see partial results
--- XXX ASM interpreter?
+-- Main
 
-interpret program input = show $ bf ([], program) mem input output
-    where mem = ([], take 30000 (repeat 0))
-          output = []
+str2program :: Stream -> Program
+str2program program = ([], program)
+
+buildmem :: Int -> Memory
+buildmem size = ([], take size (repeat 0))
+
+interpret :: Stream -> Stream -> Stream
+interpret program input = bf (str2program program) 
+                             (buildmem 30000)
+                             input 
+                             []
 
 printOutput :: String -> IO()
 printOutput output = putStr output
