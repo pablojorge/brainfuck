@@ -2,8 +2,8 @@ import System.IO
 import System.Environment
 import Data.Char
 import Debug.Trace
+import qualified Control.Exception as C
 
--- XXX better error handling
 -- XXX ASM interpreter?
 
 -- Data types
@@ -51,6 +51,9 @@ inputb byte (a,b)
     -- | trace ("inputb " ++ show (head input)) False = undefined
     | otherwise = (a, (ord byte) : (tail b))
 
+onEOF :: C.IOException -> IO (Char)
+onEOF e = return (chr 7)
+
 bf :: Program -> Memory -> IO ()
 -- return current output if we reached the end of the program
 bf (_,[]) _ = return ()
@@ -65,12 +68,12 @@ bf prg mem
     | (current prg) == '.' = do putChar $ chr $ current mem
                                 hFlush stdout
                                 bf (advance prg) mem 
-    | (current prg) == ',' = do byte <- (catch getChar) (\_ -> do return (chr 7))
+    | (current prg) == ',' = do byte <- (C.catch getChar) 
+                                        onEOF
                                 if byte /= (chr 7) then
                                     bf (advance prg) (inputb byte mem)
                                 else
-                                    do putStrLn "EOF found"
-                                       return ()
+                                    return ()
     -- loops
     | (current prg) == '[' = bf (loop_start prg mem) mem
     | (current prg) == ']' = bf (loop_end prg mem) mem
