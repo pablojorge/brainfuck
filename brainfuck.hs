@@ -40,19 +40,17 @@ advance (a,b) = (a ++ [head b], tail b)
 recede :: ([a], [a]) -> ([a], [a])
 recede (a,b) = (init a, (last a) : b)
 
+writemem :: Int -> Memory -> Memory
+writemem c (a,b) = (a, c : (tail b))
+
 increment :: Memory -> Memory
-increment (a,b) = (a, ((head b) + 1) : (tail b))
+increment mem = writemem ((current mem) + 1) mem
 
 decrement :: Memory -> Memory
-decrement (a,b) = (a, ((head b) - 1) : (tail b))
+decrement mem = writemem ((current mem) - 1) mem
 
 inputb :: Char -> Memory -> Memory
-inputb byte (a,b) 
-    -- | trace ("inputb " ++ show (head input)) False = undefined
-    | otherwise = (a, (ord byte) : (tail b))
-
-onEOF :: C.IOException -> IO (Char)
-onEOF e = return (chr 7)
+inputb byte mem = writemem (ord byte) mem
 
 bf :: Program -> Memory -> IO ()
 -- return current output if we reached the end of the program
@@ -69,7 +67,7 @@ bf prg mem
                                 hFlush stdout
                                 bf (advance prg) mem 
     | (current prg) == ',' = do byte <- (C.catch getChar) 
-                                        onEOF
+                                        onIOException
                                 if byte /= (chr 7) then
                                     bf (advance prg) (inputb byte mem)
                                 else
@@ -79,7 +77,11 @@ bf prg mem
     | (current prg) == ']' = bf (loop_end prg mem) mem
     -- just ignore current character
     | otherwise = bf (advance prg) mem
-    where trace_bf = 
+    where onIOException :: C.IOException -> IO (Char)
+          onIOException e = return (chr 7)
+
+          trace_bf :: String
+          trace_bf = 
             ("bf" ++ 
              " prg: " ++ (show (current prg)) ++ 
              " mem: " ++ (show (current mem)))
