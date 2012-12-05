@@ -1,6 +1,9 @@
 .data
  program: .ascii "+>+>"
- len: .long . - program
+ len: .quad . - program
+
+.section,bss
+ .lcomm buffer, 30000 # Memory buffer
 
 .text
 .globl _main
@@ -9,8 +12,8 @@
 #     %rbx: program ptr
 #     %rsi: data ptr (handy for sys_read and sys_write)
 # 
-# Stack space is used for the memory. Initally, the program
-# will be statically stored in the .data section.
+# The program memory will be statically allocated in the BSS section. 
+# Initally, the program code be stored in the .data section.
 #
 # Considerations:
 #  * When invoking syscalls, the kernel destroys registers rcx and r11.
@@ -27,25 +30,8 @@
 
 _main:
     mov program@GOTPCREL(%rip), %rbx    # Initialize program ptr
-    mov %rsp, %rsi                      # Initialize data ptr
+    mov buffer@GOTPCREL(%rip), %rsi     # Initialize data ptr
 
-    # Clean memory
-    #   %rcx: Data counter
-    #   %rdi: Data ptr
-    movq $300, %rcx                     # Load memory size XXX full memory size (BSS?)
-    movq %rsi, %rdi                     # Use %rdi as aux ptr
-    xor %rdx, %rdx                      # Load 0 in %rdx
-
-clean_loop:
-    movq %rdx, (%rdi)                   # Clean byte
-    dec %rcx                            # Decrement mem size counter
-    jz interpreter_loop                 # Exit loop if limit reached
-    inc %rdi                            # Move to the next position
-    jmp clean_loop                      # Repeat
-
-    # Main interpreter loop
-    #   %rbx: Program ptr
-    #   %rsi: Data ptr   
 interpreter_loop:
 inc_pointer:
     cmpb $0x3e, (%rbx)                  # '>'

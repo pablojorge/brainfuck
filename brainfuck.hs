@@ -4,8 +4,6 @@ import Data.Char
 import Debug.Trace
 import qualified Control.Exception as C
 
--- XXX ASM interpreter?
-
 -- Data types
 type Operator = Char
 type Program = ([Operator], [Operator])

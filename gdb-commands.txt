@@ -1,0 +1,13 @@
+start
+display /5i $rip
+display /b $rsi
+display /b $rbx
+display /s $rbx
+display $r8
+display $r9
+display $rbx
+display *(long*)0x100001004
+b interpreter_loop
+b next_iter
+#cont
+#disable break 2 # to disable b interpreter_loop
