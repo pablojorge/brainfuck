@@ -60,6 +60,8 @@ inputb:
     xor %rdi, %rdi                      # fd 0 (stdin)
     movq $1, %rdx                       # Buffer size (read a single char)
     syscall
+    cmp $0x00, %rax                     # Detect EOF on input (ret == 0)
+    je interpreter_end
    ##
     jmp next_iter
 outputb:
