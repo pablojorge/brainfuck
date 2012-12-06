@@ -1,5 +1,5 @@
 .data
- program: .ascii "+>+>"
+ program: .ascii ",."
  len: .quad . - program
 
 .section,bss
@@ -40,6 +40,9 @@ inc_pointer:
     jmp next_iter
 dec_pointer:
     cmpb $0x3c, (%rbx)                  # '<'
+    jne inc_data
+    dec %rsi                            # Decrement data pointer
+    jmp next_iter
 inc_data:
     cmpb $0x2b, (%rbx)                  # '+'
     jne dec_data
@@ -47,8 +50,17 @@ inc_data:
     jmp next_iter
 dec_data:
     cmpb $0x2d, (%rbx)                  # '-'
+    jne inputb
+    decb (%rsi)                         # Decrement pointed data
+    jmp next_iter
 inputb:
     cmpb $0x2c, (%rbx)                  # ','
+    jne outputb
+    movq $0x2000003, %rax               # SYS_read (3)
+    xor %rdi, %rdi                      # fd 0 (stdin)
+    movq $1, %rdx                       # Buffer size (read a single char)
+    syscall
+    jmp next_iter
 outputb:
     cmpb $0x2e, (%rbx)                  # '.'
     jne loop_start
