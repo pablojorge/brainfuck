@@ -6,6 +6,7 @@ Some experiments with the [brainfuck language](http://www.muppetlabs.com/~breadb
  * brainfuck.c: Interpreter in C
  * brainfuck.hs: Interpreter in Haskell
  * bf2c.hs: Translator from brainfuck to C in Haskell
+ * brainfuck.asm: Interpreter in assembler for x86_64
 
 ## Examples
 
@@ -77,14 +78,6 @@ The generation of the binary for the C version can be done automatically:
     ./bf2c < sierpinski.bf | indent -kr > sierpinski.c
     $ make sierpinski
     cc -O3 sierpinski.c -o sierpinski
-
-Or, even, without explictly generating the .c first:
-
-    $ rm sierpinski sierpinski.c 
-    $ make sierpinski
-    ./bf2c < sierpinski.bf | indent -kr > sierpinski.c
-    cc -O3 sierpinski.c -o sierpinski
-    rm sierpinski.c
     $ ./sierpinski
     [...]
 

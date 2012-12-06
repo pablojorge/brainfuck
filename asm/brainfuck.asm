@@ -1,8 +1,9 @@
-.data
- program: .incbin "../samples/sierpinski.bf"
- len: .quad . - program
+#.data
+# program: .incbin "../samples/sierpinski.bf"
+# len: .quad . - program
 
 .section,bss
+ .lcomm program, 50000 # Program
  .lcomm buffer, 30000 # Memory buffer
 
 .text
@@ -11,19 +12,66 @@
 # Interpreter implementation:
 #     %rbx: program ptr
 #     %rsi: data ptr (handy for sys_read and sys_write)
+#     XXX missing regs
 # 
 # The program memory will be statically allocated in the BSS section. 
-# Initally, the program code be stored in the .data section.
+# Initally, the program code be stored in the .data section. # XXX
 #
 # Considerations:
+#  * Syscall numbers taken from /usr/include/sys/syscall.h
+#  * Constants taken from /usr/include/sys/fcntl.h
 #  * When invoking syscalls, the kernel destroys registers rcx and r11.
+#  * x86_64 calling convention: sequence %rdi, %rsi, %rdx, %rcx, %r8 and %r9
 
 _main:
+
+##
+# Obtain filename from stack and open it:
+##
+    #int3
+    #movq (%rsp), %rcx # argc (XXX handle missing arguments)
+    # int open(const char* path, int oflag, ...);
+    #          rdi               rsi        rdx
+    movq 16(%rsp), %rdi                 # XXX Stack layout
+    xor %rsi, %rsi                      # O_RDONLY (0)
+    movq $0x2000005, %rax               # SYS_open (5)
+    syscall
+    # XXX handle error (rax < 0)
+
+##
+# Read file contents in program buffer:
+##
+
+    # ssize_t read(int fildes, void *buf, size_t nbyte);
+    #              rdi         rsi        rdx
+    mov %rax, %rdi                      # fd (ret from open())
+    mov program@GOTPCREL(%rip), %rsi    # Buffer to read into
+    movq $50000, %rdx                   # Bufsize
+    movq $0x2000003, %rax               # SYS_read (3)
+    syscall
+    # XXX handle error (rax < 0)
+
+##
+# Initialize interpreter:
+##
+
+    mov %rax, %r12                      # Store program length in %r12
+
+    # XXX Store base address + length to speed up end-of-program check
     mov program@GOTPCREL(%rip), %rbx    # Initialize program ptr
     mov buffer@GOTPCREL(%rip), %rsi     # Initialize data ptr
 
+##
+# Main interpreter loop:
+##
+
 interpreter_loop:
-    
+    # Check if we reached program end: 
+    movq program@GOTPCREL(%rip), %r8    # Load addr of program base
+    addq %r12, %r8
+    cmp %r8, %rbx
+    jge interpreter_end
+
 inc_pointer:
     cmpb $0x3e, (%rbx)                  # '>'
     jne dec_pointer
@@ -47,6 +95,8 @@ dec_data:
 inputb:
     cmpb $0x2c, (%rbx)                  # ','
     jne outputb
+    # ssize_t read(int fildes, void *buf, size_t nbyte);
+    #              rdi         rsi        rdx
     movq $0x2000003, %rax               # SYS_read (3)
     xor %rdi, %rdi                      # fd 0 (stdin)
     movq $1, %rdx                       # Buffer size (read a single char)
@@ -57,6 +107,8 @@ inputb:
 outputb:
     cmpb $0x2e, (%rbx)                  # '.'
     jne loop_start
+    # ssize_t write(int fildes, const void *buf, size_t nbyte);
+    #               rdi         rsi              rdx
     movq $0x2000004, %rax               # SYS_write (4)
     movq $1, %rdi                       # fd 1 (stdout)
     movq $1, %rdx                       # Length of the string
@@ -104,18 +156,13 @@ loop_end:
 
 next_iter:
     inc %rbx                            # Increment program ptr
-    # Check if we reached program end: 
-    movq program@GOTPCREL(%rip), %r8    # Load addr of program base
-    movq len@GOTPCREL(%rip), %r9        # Load addr or program len
-    movq (%r9), %r9
-    addq %r9, %r8
-    cmp %r8, %rbx
-    jge interpreter_end
-    # Loop
-    jmp interpreter_loop
+    jmp interpreter_loop                # Loop
+
+##
+# End the interpreter (invoke sys_exit)
+##
 
 interpreter_end:
-    # Invoke the exit syscall:
     movq $0, %rdi                       # we want to call exit(0)
     movq $0x2000001, %rax               # SYS_exit=1
     syscall
