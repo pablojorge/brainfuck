@@ -77,6 +77,17 @@
  write $$0x1, $0 @GOTPCREL(%rip), (%rdx)
 .endm
 
+.macro begin_operand
+ $0:
+  cmpb $1, (%rbx)
+  jne $0_end
+.endm
+
+.macro end_operand
+  jmp next_iter
+ $0_end:
+.endm
+
 ##
 # Interpreter implementation:
 #     %rbx: program ptr
@@ -100,128 +111,114 @@ _main:
 ##
 # Obtain filename from stack and open it:
 ##
-    # Check arguments count first:
-    movq (%rsp), %rcx # "argc"
-    cmp $0x02, %rcx
-    jge get_filename
-    print_constant missing_args
-    print_constant usage
-    exit $1
+  # Check arguments count first:
+  movq (%rsp), %rcx # "argc"
+  cmp $0x02, %rcx
+  jge get_filename
+  print_constant missing_args
+  print_constant usage
+  exit $1
 
  get_filename:
-    # int open(const char* path, int oflag, ...);
-    #          rdi               rsi        rdx
-    open 16(%rsp), $0x00 # XXX Stack layout # O_RDONLY (0)
-    cmp $0x00, %rax # XXX 0x02 on error?
-    jg read_program
-    print_constant no_such_file
-    exit $1
+  open 16(%rsp), $0x00 # XXX Stack layout # O_RDONLY (0)
+  cmp $0x00, %rax # XXX 0x02 on error?
+  jg read_program
+  print_constant no_such_file
+  exit $1
 
 ##
 # Read file contents in program buffer:
 ##
 
  read_program:
-    # ssize_t read(int fildes, void *buf, size_t nbyte);
-    #              rdi         rsi        rdx
-    read %rax, program@GOTPCREL(%rip), $50000 # fd = ret from open()
-    # XXX handle error (rax < 0)
+  read %rax, program@GOTPCREL(%rip), $50000 # fd = ret from open()
+  # XXX handle error (rax < 0)
 
 ##
 # Initialize interpreter:
 ##
 
-    mov program@GOTPCREL(%rip), %rbx    # Initialize program ptr
-    mov buffer@GOTPCREL(%rip), %rsi     # Initialize data ptr
+  mov program@GOTPCREL(%rip), %rbx # Initialize program ptr
+  mov buffer@GOTPCREL(%rip), %rsi # Initialize data ptr
 
-    # Point %r12 to the end of the program:
-    mov %rbx, %r12
-    add %rax, %r12
+ # Point %r12 to the end of the program:
+  mov %rbx, %r12
+  add %rax, %r12
 
 ##
 # Main interpreter loop:
 ##
 
 interpreter_loop:
-    # Check if we reached program end: 
-    cmp %r12, %rbx
-    jge interpreter_end
+  # Check if we reached program end: 
+  cmp %r12, %rbx
+  jge interpreter_end
 
-inc_pointer:
-    cmpb $0x3e, (%rbx)                  # '>'
-    jne dec_pointer
-    inc %rsi                            # Increment data pointer
-    jmp next_iter
-dec_pointer:
-    cmpb $0x3c, (%rbx)                  # '<'
-    jne inc_data
-    dec %rsi                            # Decrement data pointer
-    jmp next_iter
-inc_data:
-    cmpb $0x2b, (%rbx)                  # '+'
-    jne dec_data
-    incb (%rsi)                         # Increment pointed data
-    jmp next_iter
-dec_data:
-    cmpb $0x2d, (%rbx)                  # '-'
-    jne inputb
-    decb (%rsi)                         # Decrement pointed data
-    jmp next_iter
-inputb:
-    cmpb $0x2c, (%rbx)                  # ','
-    jne outputb
-    read $0, %rsi, $1                   # fd 0 (stdin), read a single char
-    cmp $0x00, %rax                     # Detect EOF on input (ret == 0)
-    je interpreter_end
-    jmp next_iter
-outputb:
-    cmpb $0x2e, (%rbx)                  # '.'
-    jne loop_start
-    write $1, %rsi, $1                  # fd 1 (stdout), write a single char
-    jmp next_iter
-loop_start:
-    cmpb $0x5b, (%rbx)                  # '['
-    jne loop_end
-    cmpb $0x00, (%rsi) # XXX testb      # If the current byte is non zero, 
-    jnz next_iter                       # we DON'T have to look for the 
-                                        # matching ']', just ignore the operand
-    movq $1, %rcx                       # Use %rcx as bracket counter
+ begin_operand inc_pointer, $0x3e # '>'
+  inc %rsi # Increment data pointer
+ end_operand inc_pointer
+
+ begin_operand dec_pointer, $0x3c # '<'
+  dec %rsi # Decrement data pointer
+ end_operand dec_pointer
+
+ begin_operand inc_data, $0x2b # '+'
+  incb (%rsi) # Increment pointed data
+ end_operand inc_data
+
+ begin_operand dec_data, $0x2d # '-'
+  decb (%rsi) # Decrement pointed data
+ end_operand dec_data
+
+ begin_operand inputb, $0x2c # ','
+  read $0, %rsi, $1 # fd 0 (stdin), read a single char
+  cmp $0x00, %rax # Detect EOF on input (ret == 0)
+  je interpreter_end # Abort if EOF was reached
+ end_operand inputb
+
+ begin_operand outputb, $0x2e # '.'
+  write $1, %rsi, $1                  # fd 1 (stdout), write a single char
+ end_operand outputb
+
+ begin_operand loop_start, $0x5b # '['
+  cmpb $0x00, (%rsi) # If the current byte is non zero, # XXX testb
+  jnz next_iter      # we DON'T have to look for the 
+                     # matching ']', just ignore the operand
+  movq $1, %rcx # Use %rcx as bracket counter
   match_fwd_open:
-    inc %rbx
-    cmpb $0x5b, (%rbx)                  # If we find another '[', increment the 
-    jne match_fwd_close                 # bracket count
-    inc %rcx
-    jmp match_fwd_open
+   inc %rbx
+   cmpb $0x5b, (%rbx) # If we find another '[', increment the bracket count
+   jne match_fwd_close
+   inc %rcx
+   jmp match_fwd_open
   match_fwd_close:
-    cmpb $0x5d, (%rbx)                  # If we find a ']', decrement the 
-                                        # bracket count
-    jne match_fwd_open
-    dec %rcx
-    jnz match_fwd_open                  # Continue matching if count still > 0
-    jmp next_iter
-loop_end:
-    cmpb $0x5d, (%rbx)                  # ']'
-    jne next_iter
-    cmpb $0x00, (%rsi) # XXX testb      # If the current byte is zero, 
-    jz next_iter                        # we DON'T have to look for the 
-                                        # matching '[', just ignore the operand
-    movq $1, %rcx                       # Use %rcx as bracket counter
+   cmpb $0x5d, (%rbx) # If we find a ']', decrement the bracket count
+   jne match_fwd_open
+   dec %rcx
+   jnz match_fwd_open # Continue matching if count still > 0
+ end_operand loop_start
+
+ begin_operand loop_end, $0x5d # ']'
+  cmpb $0x00, (%rsi) # If the current byte is zero, # XXX testb
+  jz next_iter       # we DON'T have to look for the 
+                     # matching '[', just ignore the operand
+  movq $1, %rcx # Use %rcx as bracket counter
   match_bwd_open:
-    dec %rbx
-    cmpb $0x5d, (%rbx)                  # If we find another ']', increment the 
-    jne match_bwd_close                 # bracket count
-    inc %rcx
-    jmp match_bwd_open
+   dec %rbx
+   cmpb $0x5d, (%rbx) # If we find another ']', increment the bracket count
+   jne match_bwd_close
+   inc %rcx
+   jmp match_bwd_open
   match_bwd_close:
-    cmpb $0x5b, (%rbx)                  # If we find a '[', decrement the 
-                                        # bracket count
-    jne match_bwd_open
-    dec %rcx
-    jnz match_bwd_open                  # Continue matching if count still > 0
+   cmpb $0x5b, (%rbx) # If we find a '[', decrement the bracket count
+   jne match_bwd_open
+   dec %rcx
+   jnz match_bwd_open # Continue matching if count still > 0
+ end_operand loop_end
 
 next_iter:
-    inc %rbx                            # Increment program ptr
-    jmp interpreter_loop                # Loop
+ inc %rbx # Increment program ptr
+ jmp interpreter_loop # Loop
 
 ##
 # End the interpreter
