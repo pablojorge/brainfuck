@@ -2,7 +2,9 @@ ALL = brainfuck
 
 all: $(ALL)
 
-%.o: %.asm
+brainfuck: brainfuck.o
+
+%.o: %.s
 	as -arch x86_64 $< -o $@
 
 %: %.o

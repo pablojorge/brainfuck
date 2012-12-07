@@ -6,7 +6,7 @@ This projects contains several interpreters for the [brainfuck language](http://
  * [c/brainfuck.c](c/brainfuck.c): Interpreter in C
  * [haskell/brainfuck.hs](haskell/brainfuck.hs): Interpreter in Haskell
  * [haskell/bf2c.hs](haskell/bf2c.hs): Translator from brainfuck to C in Haskell
- * [asm/brainfuck.asm](asm/brainfuck.asm): Interpreter in assembler for x86_64
+ * [asm/brainfuck.s](asm/brainfuck.s): Interpreter in assembler for x86_64
  
 Is also includes a series of sample programs:
 
@@ -21,6 +21,10 @@ And very simple programs I wrote myself:
 
  * [programs/cat.bf](programs/cat.bf): Emulates the "cat" program. It's just "+[,.]"
  * [programs/tolower.bf](programs/tolower.bf): Prints the lower case equivalent of its input, but it's no so smart since it doesn't check for the original case or whether it's a letter or not.
+ 
+# System support
+
+    XXXX
 
 # Interpreters
 
@@ -101,7 +105,7 @@ Running the primes generator with the assembler interpreter:
 
     $ cd asm
     $ make
-	as -arch x86_64 brainfuck.asm -o brainfuck.o
+	as -arch x86_64 brainfuck.s -o brainfuck.o
 	ld -e _main -arch x86_64 -lc brainfuck.o -o brainfuck 
 	ld: warning: -macosx_version_min not specified, assuming 10.6
 	rm brainfuck.o

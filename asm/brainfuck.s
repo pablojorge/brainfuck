@@ -2,6 +2,8 @@
 # Constants declarations
 ##
 
+# XXX Linux support ??
+
 .data
  missing_args: .ascii "Missing arguments!\n"
  missing_args_len: .quad . - missing_args
