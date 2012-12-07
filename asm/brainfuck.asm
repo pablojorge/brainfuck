@@ -88,6 +88,29 @@
  $0_end:
 .endm
 
+# This macro is used for the loop_start and loop_end operands
+# In each case, %rcx holds the counter of brackets that we have to skip
+# in order to find the matching one. The difference between matching a closing
+# bracket to an opening one and viceversa, is that in one case, the program
+# is advanced forward (when looking for the closing bracket), and in the other 
+# it's moved backwards (when looking for the opening one). Of course the 
+# brackets also have to be swapped (which is the one we started with and it's
+# match)
+.macro fmatch_bracket
+ movq $$1, %rcx # Use %rcx as bracket counter
+ fsame_$0:
+  $0 %rbx
+  cmpb $1, (%rbx) # If we find the same bracket, increment the count
+  jne fmatch_$0
+  inc %rcx
+  jmp fsame_$0
+ fmatch_$0:
+  cmpb $2, (%rbx) # If we find the matching bracket, decrement the count
+  jne fsame_$0
+  dec %rcx
+ jnz fsame_$0 # Continue matching if count still > 0
+.endm
+
 ##
 # Interpreter implementation:
 #     %rbx: program ptr
@@ -184,36 +207,14 @@ interpreter_loop:
   cmpb $0x00, (%rsi) # If the current byte is non zero, # XXX testb
   jnz next_iter      # we DON'T have to look for the 
                      # matching ']', just ignore the operand
-  movq $1, %rcx # Use %rcx as bracket counter
-  match_fwd_open:
-   inc %rbx
-   cmpb $0x5b, (%rbx) # If we find another '[', increment the bracket count
-   jne match_fwd_close
-   inc %rcx
-   jmp match_fwd_open
-  match_fwd_close:
-   cmpb $0x5d, (%rbx) # If we find a ']', decrement the bracket count
-   jne match_fwd_open
-   dec %rcx
-   jnz match_fwd_open # Continue matching if count still > 0
+  fmatch_bracket inc, $0x5b, $0x5d # (inc the program ptr, '[', ']')
  end_operand loop_start
 
  begin_operand loop_end, $0x5d # ']'
   cmpb $0x00, (%rsi) # If the current byte is zero, # XXX testb
   jz next_iter       # we DON'T have to look for the 
                      # matching '[', just ignore the operand
-  movq $1, %rcx # Use %rcx as bracket counter
-  match_bwd_open:
-   dec %rbx
-   cmpb $0x5d, (%rbx) # If we find another ']', increment the bracket count
-   jne match_bwd_close
-   inc %rcx
-   jmp match_bwd_open
-  match_bwd_close:
-   cmpb $0x5b, (%rbx) # If we find a '[', decrement the bracket count
-   jne match_bwd_open
-   dec %rcx
-   jnz match_bwd_open # Continue matching if count still > 0
+  fmatch_bracket dec, $0x5d, $0x5b # (dec the program ptr, ']', '[')
  end_operand loop_end
 
 next_iter:
