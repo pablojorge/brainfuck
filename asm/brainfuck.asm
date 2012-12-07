@@ -1,6 +1,6 @@
-#.data
-# program: .incbin "../samples/sierpinski.bf"
-# len: .quad . - program
+.data
+ missing_args: .ascii "Missing arguments!\n"
+ missing_args_len: .quad . - missing_args
 
 .section,bss
  .lcomm program, 50000 # Program
@@ -9,27 +9,44 @@
 .text
 .globl _main
 
+##
 # Interpreter implementation:
 #     %rbx: program ptr
 #     %rsi: data ptr (handy for sys_read and sys_write)
 #     XXX missing regs
 # 
-# The program memory will be statically allocated in the BSS section. 
-# Initally, the program code be stored in the .data section. # XXX
+# The program memory is statically allocated in the BSS section. The BSS 
+# section is zero-filled at program start, so there's no need to clean it.
+# The program itself is read from a file, obtained via command-line arguments,
+# and also stored in a pre-allocated buffer in the BSS section.
 #
 # Considerations:
 #  * Syscall numbers taken from /usr/include/sys/syscall.h
 #  * Constants taken from /usr/include/sys/fcntl.h
 #  * When invoking syscalls, the kernel destroys registers rcx and r11.
 #  * x86_64 calling convention: sequence %rdi, %rsi, %rdx, %rcx, %r8 and %r9
+##
 
 _main:
 
 ##
 # Obtain filename from stack and open it:
 ##
-    #int3
-    #movq (%rsp), %rcx # argc (XXX handle missing arguments)
+    # Check arguments count first:
+    movq (%rsp), %rcx                   # "argc"
+    cmp $0x02, %rcx
+    jge get_filename
+    # ssize_t write(int fildes, const void *buf, size_t nbyte);
+    #               rdi         rsi              rdx
+    movq $0x1, %rdi
+    mov missing_args@GOTPCREL(%rip), %rsi
+    mov missing_args_len@GOTPCREL(%rip), %rdx
+    mov (%rdx), %rdx
+    movq $0x2000004, %rax
+    syscall
+    jmp exit 
+
+ get_filename:
     # int open(const char* path, int oflag, ...);
     #          rdi               rsi        rdx
     movq 16(%rsp), %rdi                 # XXX Stack layout
@@ -38,6 +55,7 @@ _main:
     syscall
     # XXX handle error (rax < 0)
 
+ read_program:
 ##
 # Read file contents in program buffer:
 ##
@@ -163,6 +181,10 @@ next_iter:
 ##
 
 interpreter_end:
+    # Cleanup?
+    jmp exit
+
+exit:
     movq $0, %rdi                       # we want to call exit(0)
     movq $0x2000001, %rax               # SYS_exit=1
     syscall
