@@ -1,31 +1,47 @@
-## Brainfuck Experiments
+# Brainfuck Experiments
 
-Some experiments with the [brainfuck language](http://www.muppetlabs.com/~breadbox/bf/). Currently, this is what's available:
+This projects contains several interpreters for the [brainfuck language](http://www.muppetlabs.com/~breadbox/bf/). Currently, this is what's available:
 
- * brainfuck.py: Interpreter in Python
- * brainfuck.c: Interpreter in C
- * brainfuck.hs: Interpreter in Haskell
- * bf2c.hs: Translator from brainfuck to C in Haskell
- * brainfuck.asm: Interpreter in assembler for x86_64
+ * [python/brainfuck.py](python/brainfuck.py): Interpreter in Python
+ * [c/brainfuck.c](c/brainfuck.c): Interpreter in C
+ * [haskell/brainfuck.hs](haskell/brainfuck.hs): Interpreter in Haskell
+ * [haskell/bf2c.hs](haskell/bf2c.hs): Translator from brainfuck to C in Haskell
+ * [asm/brainfuck.asm](asm/brainfuck.asm): Interpreter in assembler for x86_64
+ 
+Is also includes a series of sample programs:
 
-## Examples
+ * [samples/hello.bf](samples/hello.bf): Simple hello world! program
+ * [samples/primes.bf](samples/primes.bf): Prime number generator. It prompts a number and generates all the primes from 1 up to that number.
+ * [samples/rot13.bf](samples/rot13.bf): Applies ROT13 to its input
+ * [samples/fibonacci.bf](samples/fibonacci.bf): Fibonacci number generator.
+ * [samples/mandelbrot.bf](samples/mandelbrot.bf): Mandelbrot set generator (taken from [http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b](http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b))
+ * [samples/sierpinski.bf](samples/sierpinski.bf): Sierpinsky Triangle generator (taken from the [spanish Wikipedia article of Brainfuck](http://es.wikipedia.org/wiki/Brainfuck))
+ 
+And very simple programs I wrote myself:
 
-### Python interpreter
+ * [programs/cat.bf](programs/cat.bf): Emulates the "cat" program. It's just "+[,.]"
+ * [programs/tolower.bf](programs/tolower.bf): Prints the lower case equivalent of its input, but it's no so smart since it doesn't check for the original case or whether it's a letter or not.
+
+# Interpreters
+
+## Python
 
 Using the python interpreter to run the helloworld program found in the [Wikipedia article about Brainfuck](http://en.wikipedia.org/wiki/Brainfuck):
 
+    $ cd python
     $ cat << EOF | python brainfuck.py 
     > ++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>.
     > EOF
     Hello World!
 
-### C interpreter
+## C
 
-Running the Sierpinsky Triangle generator found in the [spanish Wikipedia article of Brainfuck](http://es.wikipedia.org/wiki/Brainfuck) with the C interpreter:
+Running the Sierpinsky Triangle generator:
 
+    $ cd c
     $ make brainfuck
     cc brainfuck.c -o brainfuck
-    $ ./brainfuck sierpinski.bf 
+    $ ./brainfuck ../samples/sierpinski.bf 
                                     *    
                                    * *    
                                   *   *    
@@ -59,35 +75,47 @@ Running the Sierpinsky Triangle generator found in the [spanish Wikipedia articl
       *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *    
      * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *    
 
-### Using the Brainfuck to C translator
+## Haskell
+
+To use the haskell interpreter:
+
+    $ cd haskell
+    $ runhaskell brainfuck.hs ../samples/hello.bf 
+	Hello World!
+
+## Brainfuck to C translator
 
 Running the same program, but the version translated to C:
 
-    $ make bf2c
-    ghc --make bf2c -o bf2c
-    [1 of 1] Compiling Main             ( bf2c.hs, bf2c.o )
-    Linking bf2c ...
-    $ ./bf2c < sierpinski.bf > sierpinski.c
-    $ cc sierpinski.c -o sierpinski
-    $ ./sierpinski
-    [...]
-
-The generation of the binary for the C version can be done automatically:
-
-    $ make sierpinski.c
-    ./bf2c < sierpinski.bf | indent -kr > sierpinski.c
+    $ cd haskell
+    $ make ../samples/sierpinski.c
+	runhaskell bf2c.hs < ../samples/sierpinski.bf | indent > sierpinski.c
     $ make sierpinski
-    cc -O3 sierpinski.c -o sierpinski
+	cc sierpinski.c -o sierpinski
     $ ./sierpinski
     [...]
+
+## Assembler
+
+Running the primes generator with the assembler interpreter:
+
+    $ cd asm
+    $ make
+	as -arch x86_64 brainfuck.asm -o brainfuck.o
+	ld -e _main -arch x86_64 -lc brainfuck.o -o brainfuck 
+	ld: warning: -macosx_version_min not specified, assuming 10.6
+	rm brainfuck.o
+	$ ./brainfuck ../samples/primes.bf 
+	Primes up to: 50
+	2 3 5 7 11 13 17 19 23 29 31 37 41 43 47  
 
 ## Speed differences between each version
 
-A good program to use as benchmark is the mandelbrot set fractal [mandelbrot.b](http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b).
+A good program to use as benchmark is the Mandelbrot set generator.
 
 First, with the python interpreter:
 
-    $ time python brainfuck.py mandelbrot.b
+    $ time python brainfuck.py ../samples/mandelbrot.bf
     AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDEGFFEEEEDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
     AAAAAAAAAAAAAAABBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDEEEFGIIGFFEEEDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBB
     AAAAAAAAAAAAABBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDEEEEFFFI KHGGGHGEDDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBB
@@ -145,7 +173,7 @@ It took 992 minutes (16hs 32 min). Not very fast...
 
 Now with the C interpreter:
 
-    $ time ./brainfuck mandelbrot.b
+    $ time ./brainfuck ../samples/mandelbrot.bf
     [...]
     real    1m50.316s
     user    1m50.251s
@@ -155,7 +183,7 @@ Now with the C interpreter:
 
 3rd try: the translated to C version without optimizations:
 
-    $ ./bf2c < mandelbrot.b > mandelbrot.c
+    $ runhaskell bf2c.hs < ../samples/mandelbrot.bf > mandelbrot.c
     $ cc mandelbrot.c -o mandelbrot
     $ time ./mandelbrot
     [...]
