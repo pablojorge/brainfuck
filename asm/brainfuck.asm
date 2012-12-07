@@ -1,6 +1,23 @@
 .data
  missing_args: .ascii "Missing arguments!\n"
  missing_args_len: .quad . - missing_args
+ 
+ usage: .ascii "Usage:\n\t./brainfuck <program name>\n"
+ usage_len: .quad . - usage
+
+ no_such_file: .ascii "No such file or directory"
+ no_such_file_len: .quad . - no_such_file
+
+.macro print_constant
+ # ssize_t write(int fildes, const void *buf, size_t nbyte);
+ #               rdi         rsi              rdx
+ movq $$0x1, %rdi
+ mov $0 @GOTPCREL(%rip), %rsi
+ mov $0_len @GOTPCREL(%rip), %rdx
+ mov (%rdx), %rdx
+ movq $$0x2000004, %rax
+ syscall
+.endm
 
 .section,bss
  .lcomm program, 50000 # Program
@@ -36,14 +53,8 @@ _main:
     movq (%rsp), %rcx                   # "argc"
     cmp $0x02, %rcx
     jge get_filename
-    # ssize_t write(int fildes, const void *buf, size_t nbyte);
-    #               rdi         rsi              rdx
-    movq $0x1, %rdi
-    mov missing_args@GOTPCREL(%rip), %rsi
-    mov missing_args_len@GOTPCREL(%rip), %rdx
-    mov (%rdx), %rdx
-    movq $0x2000004, %rax
-    syscall
+    print_constant missing_args
+    print_constant usage
     jmp exit 
 
  get_filename:
@@ -53,13 +64,16 @@ _main:
     xor %rsi, %rsi                      # O_RDONLY (0)
     movq $0x2000005, %rax               # SYS_open (5)
     syscall
-    # XXX handle error (rax < 0)
+    cmp $0x00, %rax # XXX 0x02 on error?
+    jg read_program
+    print_constant no_such_file
+    jmp exit
 
- read_program:
 ##
 # Read file contents in program buffer:
 ##
 
+ read_program:
     # ssize_t read(int fildes, void *buf, size_t nbyte);
     #              rdi         rsi        rdx
     mov %rax, %rdi                      # fd (ret from open())
@@ -73,11 +87,12 @@ _main:
 # Initialize interpreter:
 ##
 
-    mov %rax, %r12                      # Store program length in %r12
-
-    # XXX Store base address + length to speed up end-of-program check
     mov program@GOTPCREL(%rip), %rbx    # Initialize program ptr
     mov buffer@GOTPCREL(%rip), %rsi     # Initialize data ptr
+
+    # Point %r12 to the end of the program:
+    mov %rbx, %r12
+    add %rax, %r12
 
 ##
 # Main interpreter loop:
@@ -85,9 +100,7 @@ _main:
 
 interpreter_loop:
     # Check if we reached program end: 
-    movq program@GOTPCREL(%rip), %r8    # Load addr of program base
-    addq %r12, %r8
-    cmp %r8, %rbx
+    cmp %r12, %rbx
     jge interpreter_end
 
 inc_pointer:
