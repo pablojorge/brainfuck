@@ -113,9 +113,16 @@
 
 ##
 # Interpreter implementation:
-#     %rbx: program ptr
-#     %rsi: data ptr (handy for sys_read and sys_write)
-#     XXX missing regs
+#
+# Register Usage:
+#  %rax: holds syscall number and syscall return value
+#  %rbx: ** program ptr **
+#  %rcx: holds bracket count in fmatch_bracket and argc at the beginning
+#  %rdx: third argument to syscalls (usually buf size)
+#  %rsp: used to obtain cmdline args
+#  %rdi: first argument to syscalls
+#  %rsi: ** data ptr ** (handy for sys_read and sys_write). Also used in open()
+#  %r12: points to the end of the program
 # 
 # The program memory is statically allocated in the BSS section. The BSS 
 # section is zero-filled at program start, so there's no need to clean it.
