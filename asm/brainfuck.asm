@@ -1,3 +1,7 @@
+##
+# Constants declarations
+##
+
 .data
  missing_args: .ascii "Missing arguments!\n"
  missing_args_len: .quad . - missing_args
@@ -8,23 +12,70 @@
  no_such_file: .ascii "No such file or directory"
  no_such_file_len: .quad . - no_such_file
 
-.macro print_constant
- # ssize_t write(int fildes, const void *buf, size_t nbyte);
- #               rdi         rsi              rdx
- movq $$0x1, %rdi
- mov $0 @GOTPCREL(%rip), %rsi
- mov $0_len @GOTPCREL(%rip), %rdx
- mov (%rdx), %rdx
- movq $$0x2000004, %rax
- syscall
-.endm
+## 
+# Buffers
+##
 
 .section,bss
  .lcomm program, 50000 # Program
  .lcomm buffer, 30000 # Memory buffer
 
+##
+# Text section
+##
+
 .text
 .globl _main
+
+##
+# Macros
+##
+
+## Syscalls
+
+.macro exit
+ # void exit(int status);
+ #           rdi
+ movq $0, %rdi
+ movq $$0x2000001, %rax # SYS_exit (1)
+ syscall
+.endm
+
+.macro read
+ # ssize_t read(int fildes, void *buf, size_t nbyte);
+ #              rdi         rsi        rdx
+ movq $0, %rdi
+ movq $1, %rsi
+ movq $2, %rdx
+ movq $$0x2000003, %rax # SYS_read (3)
+ syscall
+.endm
+
+.macro write
+ # ssize_t write(int fildes, const void *buf, size_t nbyte);
+ #               rdi         rsi              rdx
+ movq $0, %rdi
+ movq $1, %rsi
+ movq $2, %rdx
+ movq $$0x2000004, %rax # SYS_open (4)
+ syscall
+.endm
+
+.macro open
+ # int open(const char* path, int oflag, ...);
+ #          rdi               rsi        rdx
+ movq $0, %rdi
+ movq $1, %rsi
+ movq $$0x2000005, %rax # SYS_open (5)
+ syscall
+.endm
+
+## Convenience macros
+
+.macro print_constant
+ mov $0_len @GOTPCREL(%rip), %rdx
+ write $$0x1, $0 @GOTPCREL(%rip), (%rdx)
+.endm
 
 ##
 # Interpreter implementation:
@@ -50,24 +101,21 @@ _main:
 # Obtain filename from stack and open it:
 ##
     # Check arguments count first:
-    movq (%rsp), %rcx                   # "argc"
+    movq (%rsp), %rcx # "argc"
     cmp $0x02, %rcx
     jge get_filename
     print_constant missing_args
     print_constant usage
-    jmp exit 
+    exit $1
 
  get_filename:
     # int open(const char* path, int oflag, ...);
     #          rdi               rsi        rdx
-    movq 16(%rsp), %rdi                 # XXX Stack layout
-    xor %rsi, %rsi                      # O_RDONLY (0)
-    movq $0x2000005, %rax               # SYS_open (5)
-    syscall
+    open 16(%rsp), $0x00 # XXX Stack layout # O_RDONLY (0)
     cmp $0x00, %rax # XXX 0x02 on error?
     jg read_program
     print_constant no_such_file
-    jmp exit
+    exit $1
 
 ##
 # Read file contents in program buffer:
@@ -76,11 +124,7 @@ _main:
  read_program:
     # ssize_t read(int fildes, void *buf, size_t nbyte);
     #              rdi         rsi        rdx
-    mov %rax, %rdi                      # fd (ret from open())
-    mov program@GOTPCREL(%rip), %rsi    # Buffer to read into
-    movq $50000, %rdx                   # Bufsize
-    movq $0x2000003, %rax               # SYS_read (3)
-    syscall
+    read %rax, program@GOTPCREL(%rip), $50000 # fd = ret from open()
     # XXX handle error (rax < 0)
 
 ##
@@ -126,24 +170,14 @@ dec_data:
 inputb:
     cmpb $0x2c, (%rbx)                  # ','
     jne outputb
-    # ssize_t read(int fildes, void *buf, size_t nbyte);
-    #              rdi         rsi        rdx
-    movq $0x2000003, %rax               # SYS_read (3)
-    xor %rdi, %rdi                      # fd 0 (stdin)
-    movq $1, %rdx                       # Buffer size (read a single char)
-    syscall
+    read $0, %rsi, $1                   # fd 0 (stdin), read a single char
     cmp $0x00, %rax                     # Detect EOF on input (ret == 0)
     je interpreter_end
     jmp next_iter
 outputb:
     cmpb $0x2e, (%rbx)                  # '.'
     jne loop_start
-    # ssize_t write(int fildes, const void *buf, size_t nbyte);
-    #               rdi         rsi              rdx
-    movq $0x2000004, %rax               # SYS_write (4)
-    movq $1, %rdi                       # fd 1 (stdout)
-    movq $1, %rdx                       # Length of the string
-    syscall
+    write $1, %rsi, $1                  # fd 1 (stdout), write a single char
     jmp next_iter
 loop_start:
     cmpb $0x5b, (%rbx)                  # '['
@@ -190,14 +224,10 @@ next_iter:
     jmp interpreter_loop                # Loop
 
 ##
-# End the interpreter (invoke sys_exit)
+# End the interpreter
 ##
 
 interpreter_end:
     # Cleanup?
-    jmp exit
+    exit $0
 
-exit:
-    movq $0, %rdi                       # we want to call exit(0)
-    movq $0x2000001, %rax               # SYS_exit=1
-    syscall
