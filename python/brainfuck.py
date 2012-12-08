@@ -1,4 +1,5 @@
 import sys
+import optparse
 
 class Buffer:
     def __init__(self, size):
@@ -7,23 +8,21 @@ class Buffer:
 
     def move(self, n):
         self.ptr += n
-        assert(0 <= self.ptr < len(self.array))
 
     def increment(self):
-        assert(0 <= self.ptr < len(self.array))
         self.array[self.ptr]+=1
 
     def decrement(self):
-        assert(0 <= self.ptr < len(self.array))
         self.array[self.ptr]-=1
 
     def current(self):
-        assert(0 <= self.ptr < len(self.array))
         return self.array[self.ptr]
 
     def store(self, val):
-        assert(0 <= self.ptr < len(self.array))
         self.array[self.ptr] = val
+
+    def dump(self, start, end):
+        return self.array[start:end]
 
     def __str__(self):
         return "ptr: %d value: %d" % (self.ptr, self.current())
@@ -35,10 +34,8 @@ class Program:
 
     def advance(self, n=1):
         self.pos += n
-        assert(0 <= self.pos <= len(self.program)) # tolerate off-by-one AT END
 
     def current(self):
-        assert(0 <= self.pos < len(self.program))
         return self.program[self.pos]
 
     def eof(self):
@@ -110,11 +107,12 @@ class Interpreter:
     JUMP_FORWARD  = "["
     JUMP_BACKWARD = "]"
 
-    def __init__(self, program, buffer, instream, outstream):
+    def __init__(self, program, buffer, instream, outstream, verbose):
         self.program = program
         self.buffer = buffer
         self.instream = instream
         self.outstream = outstream
+        self.verbose = verbose
 
     def __handle_inc_ptr(self):
         """
@@ -186,8 +184,9 @@ class Interpreter:
                     count -= 1
 
     def __dump_state(self, msg):
-        pass
-        #print msg, self.program, self.buffer
+        if self.verbose:
+            #print msg, self.program, self.buffer
+            print "%s" % self.buffer.dump(0, 10)
 
     def execute(self):
         op_handler = {
@@ -209,8 +208,15 @@ class Interpreter:
             self.program.advance()
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        with open(sys.argv[1], "r") as input_file:
+    parser = optparse.OptionParser()
+    parser.add_option("-v", "--verbose", dest="verbose",
+                      action="store_true", default=False,
+                      help="Verbosity ON")
+
+    options, args = parser.parse_args()
+
+    if args:
+        with open(args[0], "r") as input_file:
             contents = input_file.read()
     else:
         contents = sys.stdin.read()
@@ -227,14 +233,17 @@ if __name__ == "__main__":
     instream = StdinStream() 
 
     # Output stream
-    #outstream = BufStream([])
-    outstream = StdoutStream()
+    if options.verbose:
+        outstream = BufStream([])
+    else:
+        outstream = StdoutStream()
 
     try:
         interpreter = Interpreter(program, 
                                   buffer, 
                                   instream, 
-                                  outstream)
+                                  outstream,
+                                  options.verbose)
         interpreter.execute()
     except EOFException:
         pass
