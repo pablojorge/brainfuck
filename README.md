@@ -2,25 +2,25 @@
 
 This projects contains several interpreters for the [brainfuck language](http://www.muppetlabs.com/~breadbox/bf/). Currently, this is what's available:
 
- * [python/brainfuck.py](python/brainfuck.py): Interpreter in Python
- * [c/brainfuck.c](c/brainfuck.c): Interpreter in C
- * [haskell/brainfuck.hs](haskell/brainfuck.hs): Interpreter in Haskell
- * [haskell/bf2c.hs](haskell/bf2c.hs): Translator from brainfuck to C in Haskell
- * [asm/brainfuck.s](asm/brainfuck.s): Interpreter in assembler for x86_64
+ * [python/brainfuck.py](blob/master/python/brainfuck.py): Interpreter in Python
+ * [c/brainfuck.c](blob/master/c/brainfuck.c): Interpreter in C
+ * [haskell/brainfuck.hs](blob/master/haskell/brainfuck.hs): Interpreter in Haskell
+ * [haskell/bf2c.hs](blob/master/haskell/bf2c.hs): Translator from brainfuck to C in Haskell
+ * [asm/brainfuck.s](blob/master/asm/brainfuck.s): Interpreter in assembler for x86_64
  
 Is also includes a series of sample programs:
 
- * [samples/hello.bf](samples/hello.bf): Simple hello world! program
- * [samples/primes.bf](samples/primes.bf): Prime number generator. It prompts a number and generates all the primes from 1 up to that number.
- * [samples/rot13.bf](samples/rot13.bf): Applies ROT13 to its input
- * [samples/fibonacci.bf](samples/fibonacci.bf): Fibonacci number generator.
- * [samples/mandelbrot.bf](samples/mandelbrot.bf): Mandelbrot set generator (taken from [http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b](http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b))
- * [samples/sierpinski.bf](samples/sierpinski.bf): Sierpinsky Triangle generator (taken from the [spanish Wikipedia article of Brainfuck](http://es.wikipedia.org/wiki/Brainfuck))
+ * [samples/hello.bf](blob/master/samples/hello.bf): Simple hello world! program
+ * [samples/primes.bf](blob/master/samples/primes.bf): Prime number generator. It prompts a number and generates all the primes from 1 up to that number.
+ * [samples/rot13.bf](blob/master/samples/rot13.bf): Applies ROT13 to its input
+ * [samples/fibonacci.bf](blob/master/samples/fibonacci.bf): Fibonacci number generator.
+ * [samples/mandelbrot.bf](blob/master/samples/mandelbrot.bf): Mandelbrot set generator (taken from [http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b](http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b))
+ * [samples/sierpinski.bf](blob/master/samples/sierpinski.bf): Sierpinsky Triangle generator (taken from the [spanish Wikipedia article of Brainfuck](http://es.wikipedia.org/wiki/Brainfuck))
  
 And very simple programs I wrote myself:
 
- * [programs/cat.bf](programs/cat.bf): Emulates the "cat" program. It's just "+[,.]"
- * [programs/tolower.bf](programs/tolower.bf): Prints the lower case equivalent of its input, but it's no so smart since it doesn't check for the original case or whether it's a letter or not.
+ * [programs/cat.bf](blob/master/programs/cat.bf): Emulates the "cat" program. It's just "+[,.]"
+ * [programs/tolower.bf](blob/master/programs/tolower.bf): Prints the lower case equivalent of its input, but it's no so smart since it doesn't check for the original case or whether it's a letter or not.
  
 # System support
 
