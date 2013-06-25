@@ -3,6 +3,8 @@
 This project contains several interpreters for the [brainfuck language](http://www.muppetlabs.com/~breadbox/bf/). Currently, this is what's available:
 
  * [python/brainfuck.py](brainfuck/blob/master/python/brainfuck.py): Interpreter in Python
+ * [python/brainfuck-simple.py](brainfuck/blob/master/python/brainfuck-simple.py): Faster version of the Python interpreter
+ * [python/brainfuck-rpython.py](brainfuck/blob/master/python/brainfuck-rpython.py): RPython-compatible version of the Python interpreter
  * [c/brainfuck.c](brainfuck/blob/master/c/brainfuck.c): Interpreter in C
  * [haskell/brainfuck.hs](brainfuck/blob/master/haskell/brainfuck.hs): Interpreter in Haskell
  * [haskell/bf2c.hs](brainfuck/blob/master/haskell/bf2c.hs): Translator from brainfuck to C in Haskell
@@ -208,3 +210,33 @@ Finally the same C version, but compiled with optimizations:
 
 Now THAT's fast.
 
+## Improvements in the Python version
+
+The original Python interpreter is excessively complex, but it can be easily improved to run faster in several ways:
+
+ * Avoiding methods lookup
+ * Pre-computing jumps between brackets
+ * Avoiding looping over non-operands
+ * Avoiding array lookups
+
+There's a separate version, brainfuck-simple.py that contains those improvements. Another version, brainfuck-rpython.py, is the same thing but slightly modified so it can be translated using RPython. The RPython was generated using: 
+
+```
+$ cd <pypy-source>
+$ python rpython/translator/goal/translate.py ~/Projects/github/brainfuck/python/brainfuck-rpython.py
+```
+
+This is the full comparison between all versions:
+
+| | Sierpinski | Mandelbrot | Primes up to 100 | 
+| ---: | :---: | :---: | :---: |
+| Non-optimized python version (CPython) | 0m5.387s | 991m45.631s | 19m34.163s |
+| Non-optimized python version (PyPy) | 0m0.470s | 24m59.928s | 0m28.210s |
+| Optimized python version (CPython) | 0m0.125s | 67m39.287s | 1m16.431s |
+| Optimized python version (PyPy) | 0m0.246s | 1m35.345s | 0m2.144s |
+| Improved python version (RPython) | 0m0.003s | 0m29.796s | 0m0.486s |
+| Assembler | 0m0.015s | 1m7.288s | 0m1.501s |
+| C Interpreter (-O0) | 0m0.014s | 2m7.036s | 0m2.012s |
+| C Interpreter (-O1) | 0m0.009s | 1m7.504s | 0m1.005s |
+| Translated to C (-O0) | 0m0.002s | 0m19.674s | 0m0.243s |
+| Translated to C (-O1) | 0m0.001s | 0m1.360s | 0m0.012s |
