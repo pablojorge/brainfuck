@@ -2,27 +2,27 @@
 
 This project contains several interpreters for the [brainfuck language](http://www.muppetlabs.com/~breadbox/bf/). Currently, this is what's available:
 
- * [python/brainfuck.py](brainfuck/blob/master/python/brainfuck.py): Interpreter in Python
- * [python/brainfuck-simple.py](brainfuck/blob/master/python/brainfuck-simple.py): Faster version of the Python interpreter
- * [python/brainfuck-rpython.py](brainfuck/blob/master/python/brainfuck-rpython.py): RPython-compatible version of the Python interpreter
- * [c/brainfuck.c](brainfuck/blob/master/c/brainfuck.c): Interpreter in C
- * [haskell/brainfuck.hs](brainfuck/blob/master/haskell/brainfuck.hs): Interpreter in Haskell
- * [haskell/bf2c.hs](brainfuck/blob/master/haskell/bf2c.hs): Translator from brainfuck to C in Haskell
- * [asm/brainfuck.s](brainfuck/blob/master/asm/brainfuck.s): Interpreter in assembler for x86_64
+ * [python/brainfuck.py](python/brainfuck.py): Interpreter in Python
+ * [python/brainfuck-simple.py](python/brainfuck-simple.py): Faster version of the Python interpreter
+ * [python/brainfuck-rpython.py](python/brainfuck-rpython.py): RPython-compatible version of the Python interpreter
+ * [c/brainfuck.c](c/brainfuck.c): Interpreter in C
+ * [haskell/brainfuck.hs](haskell/brainfuck.hs): Interpreter in Haskell
+ * [haskell/bf2c.hs](haskell/bf2c.hs): Translator from brainfuck to C in Haskell
+ * [asm/brainfuck.s](asm/brainfuck.s): Interpreter in assembler for x86_64
  
 Is also includes a series of sample programs:
 
- * [samples/hello.bf](brainfuck/blob/master/samples/hello.bf): Simple hello world! program
- * [samples/primes.bf](brainfuck/blob/master/samples/primes.bf): Prime number generator. It prompts a number and generates all the primes from 1 up to that number.
- * [samples/rot13.bf](brainfuck/blob/master/samples/rot13.bf): Applies ROT13 to its input
- * [samples/fibonacci.bf](brainfuck/blob/master/samples/fibonacci.bf): Fibonacci number generator.
- * [samples/mandelbrot.bf](brainfuck/blob/master/samples/mandelbrot.bf): Mandelbrot set generator (taken from [http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b](http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b))
- * [samples/sierpinski.bf](brainfuck/blob/master/samples/sierpinski.bf): Sierpinsky Triangle generator (taken from the [spanish Wikipedia article of Brainfuck](http://es.wikipedia.org/wiki/Brainfuck))
+ * [samples/hello.bf](samples/hello.bf): Simple hello world! program
+ * [samples/primes.bf](samples/primes.bf): Prime number generator. It prompts a number and generates all the primes from 1 up to that number.
+ * [samples/rot13.bf](samples/rot13.bf): Applies ROT13 to its input
+ * [samples/fibonacci.bf](samples/fibonacci.bf): Fibonacci number generator.
+ * [samples/mandelbrot.bf](samples/mandelbrot.bf): Mandelbrot set generator (taken from [http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b](http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b))
+ * [samples/sierpinski.bf](samples/sierpinski.bf): Sierpinsky Triangle generator (taken from the [spanish Wikipedia article of Brainfuck](http://es.wikipedia.org/wiki/Brainfuck))
  
 And very simple programs I wrote myself:
 
- * [programs/cat.bf](brainfuck/blob/master/programs/cat.bf): Emulates the "cat" program. It's just "+[,.]"
- * [programs/tolower.bf](brainfuck/blob/master/programs/tolower.bf): Prints the lower case equivalent of its input, but it's no so smart since it doesn't check for the original case or whether it's a letter or not.
+ * [programs/cat.bf](programs/cat.bf): Emulates the "cat" program. It's just "+[,.]"
+ * [programs/tolower.bf](programs/tolower.bf): Prints the lower case equivalent of its input, but it's no so smart since it doesn't check for the original case or whether it's a letter or not.
  
 # System support
 
@@ -219,7 +219,7 @@ The original Python interpreter is excessively complex, but it can be easily imp
  * Avoiding looping over non-operands
  * Avoiding array lookups
 
-There's a separate version, brainfuck-simple.py that contains those improvements. Another version, brainfuck-rpython.py, is the same thing but slightly modified so it can be translated using RPython. The RPython was generated using: 
+There's a separate version, brainfuck-simple.py that contains those improvements. Another version, brainfuck-rpython.py, is the same thing but slightly modified so it can be translated using RPython. The RPython version was generated using: 
 
 ```
 $ cd <pypy-source>
@@ -240,3 +240,7 @@ This is the full comparison between all versions:
 | C Interpreter (-O1) | 0m0.009s | 1m7.504s | 0m1.005s |
 | Translated to C (-O0) | 0m0.002s | 0m19.674s | 0m0.243s |
 | Translated to C (-O1) | 0m0.001s | 0m1.360s | 0m0.012s |
+
+Notice that the RPython version of the interpreter is faster than the C version, even when it's compiled with optimizations. Only the original brainfuck programs translated to C and then compiled run faster than the RPython interpreter.
+
+Another impressive highlight is the difference in speed for the same code between CPython and PyPy (making the code RPython-compatible requires some changes)
