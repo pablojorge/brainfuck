@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Brainfuck</title>
+    <link href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">  
+    <style>
+      body {
+        font-family: "Helvetica Neue", helvetica, arial;
+        padding: 15px;
+        text-align: center;
+      }
+
+      .hacker {
+        font-family: "Courier";
+        font-size: 12;
+        background: black;
+        color: #dddddd;
+        width: 70%;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Brainfuck</h1>
+    
+    <h3>Program:</h3>
+    <textarea class="hacker" rows="10" id="program">+[,.]</textarea>
+    
+    <div>
+      <button onclick="onOptimize();">Optimize!</button>
+    </div>
+    
+    <h3>Optimized:</h3>
+    <textarea class="hacker" rows="10" id="optimized"></textarea>
+
+    <div>
+      <button onclick="onTranslate();">Translate!</button>
+    </div>
+    
+    <h3>Translated:</h3>
+    <textarea class="hacker" rows="10" id="translated"></textarea>
+
+    <h3>Input:</h3>
+    <textarea class="hacker" rows="2" id="input"></textarea>
+
+    <div>
+      <button onclick="onRun();">Run!</button>
+      <button onclick="onInterpret();">Interpret!</button>
+    </div>
+    
+    <h3>Output:</h3>
+    <textarea class="hacker" rows="10" id="output"></textarea>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+
+    <script src="brainfuck.js"></script>
+
+  </body>
+</html>
