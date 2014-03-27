@@ -1,12 +1,25 @@
-function onOptimize() {
+$(document).ready(function () {
+    $("#btn-run").click(onRun);
+    $("#btn-optimize").click(onOptimize);
+    $("#btn-translate").click(onTranslate);
+    $("#btn-interpret").click(onInterpret);
+})
+
+function onOptimize(event) {
+    event.preventDefault();
+
     $('#optimized').val(optimize($('#program').val()));
 }
 
-function onTranslate() {
+function onTranslate(event) {
+    event.preventDefault();
+
     $('#translated').val(translate($('#optimized').val()).join('\n'));
 }
 
-function onRun() {
+function onRun(event) {
+    event.preventDefault();
+
     var output = [];
     var start = Date.now(), end;
 
@@ -25,7 +38,9 @@ function onRun() {
     alert("Ran in " + ((end - start)/1000) + " seconds");
 }
 
-function onInterpret() {
+function onInterpret(event) {
+    event.preventDefault();
+
     var start = Date.now(), end;
 
     $('#output').val('');

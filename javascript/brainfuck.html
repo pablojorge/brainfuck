@@ -8,50 +8,112 @@
     <link href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">  
     <style>
       body {
-        font-family: "Helvetica Neue", helvetica, arial;
-        padding: 15px;
-        text-align: center;
+        /*font-family: "Helvetica Neue", helvetica, arial;*/
+        /*padding: 15px;*/
+        /*text-align: center;*/
+        padding-top: 50px;
+        /*background-color: #eeeeee;*/
       }
 
-      .hacker {
+      textarea {
+        height: auto;
         font-family: "Courier";
         font-size: 12;
-        background: black;
-        color: #dddddd;
-        width: 70%;
+        width: 100%;
+        border-style: none;
+        outline: none;
+        resize: none;
       }
     </style>
   </head>
   <body>
-    <h1>Brainfuck</h1>
-    
-    <h3>Program:</h3>
-    <textarea class="hacker" rows="10" id="program">+[,.]</textarea>
-    
-    <div>
-      <button onclick="onOptimize();">Optimize!</button>
+    <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#">Brainfuck</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <form class="navbar-form navbar-right">
+            <span>Instructions per cycle:</span>
+            <input type="number" class="form-control" value="1000">
+            <button class="btn btn-primary" id="btn-run">
+              <span class="glyphicon glyphicon-play"></span>
+              Run
+            </button>
+            <button class="btn btn-primary" id="btn-optimize">
+              <span class="glyphicon glyphicon-flash"></span>
+              Optimize
+            </button>
+            <button class="btn btn-primary" id="btn-translate">
+              <span class="glyphicon glyphicon-indent-left"></span>
+              Translate
+            </button>
+            <button class="btn btn-primary" id="btn-interpret">
+              <span class="glyphicon glyphicon-sort-by-attributes"></span>
+              Interpret
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
-    
-    <h3>Optimized:</h3>
-    <textarea class="hacker" rows="10" id="optimized"></textarea>
 
-    <div>
-      <button onclick="onTranslate();">Translate!</button>
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-6" style="padding-left: 15px;
+                                     padding-right: 7px;
+                                     padding-top: 15px;">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              Program
+            </div>
+            <div class="panel-body">
+              <textarea rows=10 wrap=off id="program">+[,.]</textarea>
+            </div>
+          </div>
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              Optimized
+            </div>
+            <div class="panel-body">
+              <textarea rows=10 wrap=off id="optimized"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6" style="padding-left: 7px;
+                                     padding-right: 15px;
+                                     padding-top: 15px;">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              Translated
+            </div>
+            <div class="panel-body">
+              <textarea rows=10 wrap=off id="translated"></textarea>
+            </div>
+          </div>
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              Input
+            </div>
+            <div class="panel-body">
+              <textarea rows=10 wrap=off id="input"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12" style="padding-left: 15px; 
+                                      padding-right: 15px;">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              Output
+            </div>
+            <div class="panel-body">
+              <textarea rows=20 wrap=off id="output"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    
-    <h3>Translated:</h3>
-    <textarea class="hacker" rows="10" id="translated"></textarea>
-
-    <h3>Input:</h3>
-    <textarea class="hacker" rows="2" id="input"></textarea>
-
-    <div>
-      <button onclick="onRun();">Run!</button>
-      <button onclick="onInterpret();">Interpret!</button>
-    </div>
-    
-    <h3>Output:</h3>
-    <textarea class="hacker" rows="10" id="output"></textarea>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
