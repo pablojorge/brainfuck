@@ -35,12 +35,17 @@
         <div class="navbar-collapse collapse">
           <form class="navbar-form navbar-right">
             <span>Instructions per cycle:</span>
-            <input type="number" class="form-control" value="1000">
-            <button class="btn btn-primary" id="btn-run">
+            <input type="number" class="form-control" 
+                   value="1000" id="inst-per-cycle">
+            <button class="btn btn-success" id="btn-start">
               <span class="glyphicon glyphicon-play"></span>
-              Run
+              Start
             </button>
-            <button class="btn btn-primary" id="btn-optimize">
+            <button class="btn btn-danger disabled" id="btn-stop">
+              <span class="glyphicon glyphicon-stop"></span>
+              Stop
+            </button>
+            <!-- <button class="btn btn-primary" id="btn-optimize">
               <span class="glyphicon glyphicon-flash"></span>
               Optimize
             </button>
@@ -51,7 +56,7 @@
             <button class="btn btn-primary" id="btn-interpret">
               <span class="glyphicon glyphicon-sort-by-attributes"></span>
               Interpret
-            </button>
+            </button> -->
           </form>
         </div>
       </div>
@@ -64,35 +69,35 @@
                                      padding-top: 15px;">
           <div class="panel panel-default">
             <div class="panel-heading">
-              Program
+              <h5>Program</h5>
             </div>
             <div class="panel-body">
               <textarea rows=10 wrap=off id="program">+[,.]</textarea>
             </div>
           </div>
-          <div class="panel panel-default">
+          <!-- <div class="panel panel-default">
             <div class="panel-heading">
               Optimized
             </div>
             <div class="panel-body">
               <textarea rows=10 wrap=off id="optimized"></textarea>
             </div>
-          </div>
+          </div> -->
         </div>
         <div class="col-md-6" style="padding-left: 7px;
                                      padding-right: 15px;
                                      padding-top: 15px;">
-          <div class="panel panel-default">
+         <!--  <div class="panel panel-default">
             <div class="panel-heading">
               Translated
             </div>
             <div class="panel-body">
               <textarea rows=10 wrap=off id="translated"></textarea>
             </div>
-          </div>
+          </div> -->
           <div class="panel panel-default">
             <div class="panel-heading">
-              Input
+              <h5>Input</h5>
             </div>
             <div class="panel-body">
               <textarea rows=10 wrap=off id="input"></textarea>
@@ -105,7 +110,17 @@
                                       padding-right: 15px;">
           <div class="panel panel-default">
             <div class="panel-heading">
-              Output
+              <h5>
+                Output 
+                <small>
+                  Cycles: 
+                  <span id="cycles-count" class="badge">0</span>
+                  Running time: 
+                </small>
+                <span id="running-time" class="label label-default">
+                  0.00 seconds
+                </span>
+              </h5>
             </div>
             <div class="panel-body">
               <textarea rows=20 wrap=off id="output"></textarea>
