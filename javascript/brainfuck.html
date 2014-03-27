@@ -36,10 +36,18 @@
           <form class="navbar-form navbar-right">
             <span>Instructions per cycle:</span>
             <input type="number" class="form-control" 
-                   value="1000" id="inst-per-cycle">
+                   value="1" id="inst-per-cycle" min="1">
             <button class="btn btn-success" id="btn-start">
               <span class="glyphicon glyphicon-play"></span>
               Start
+            </button>
+            <button class="btn btn-info disabled" id="btn-pause">
+              <span class="glyphicon glyphicon-pause"></span>
+              Pause
+            </button>
+            <button class="btn btn-warning disabled" id="btn-step">
+              <span class="glyphicon glyphicon-step-forward"></span>
+              Step
             </button>
             <button class="btn btn-danger disabled" id="btn-stop">
               <span class="glyphicon glyphicon-stop"></span>
@@ -101,6 +109,7 @@
             </div>
             <div class="panel-body">
               <textarea rows=10 wrap=off id="input"></textarea>
+              <!-- <div id='fake_textarea' contenteditable></div> -->
             </div>
           </div>
         </div>
@@ -123,7 +132,7 @@
               </h5>
             </div>
             <div class="panel-body">
-              <textarea rows=20 wrap=off id="output"></textarea>
+              <textarea rows=20 wrap=off id="output" readonly></textarea>
             </div>
           </div>
         </div>

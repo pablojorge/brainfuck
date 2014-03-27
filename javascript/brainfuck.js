@@ -61,7 +61,7 @@ $(document).ready(function () {
 //               });
 // }
 
-var stop_requested = false;
+var interpreter = undefined;
 
 function onStart(event) {
     event.preventDefault();
@@ -70,58 +70,53 @@ function onStart(event) {
         cycles = 0,
         output = '';
 
-    interpret(
+    interpreter = new Interpreter(
         $('#program').val(), 
         $("#input").val(), 
-        parseInt($('#inst-per-cycle').val()),
-        function (char) {
-            output += char;
-        },
         function () {
             start = Date.now();
-            stop_requested = false;
             $('#output').val('');
             $('#cycles-count').html(cycles);
             $('#running-time').html("0.00 seconds");
             $('#btn-start').addClass("disabled");
             $('#btn-stop').removeClass("disabled");
         },
-        function () {
+        function (self) {
             cycles += 1;
             delta = (Date.now() - start) / 1000;
 
-            $('#output').val(output);
+            // $('#input').get(0).setSelectionRange(in_ptr, in_ptr+1);
+            // $('#program').get(0).setSelectionRange(pc, pc+1);
+
+            $('#output').val(self.output);
             $('#cycles-count').html(cycles);
             $('#running-time').html(delta.toFixed(2) + " seconds");
-
-            if (stop_requested) {
-                // this will force the interpreter to abort:
-                throw "STOP REQUESTED";
-            }
         },
-        function () {
+        function (err, self) {
             $('#btn-start').removeClass("disabled");
             $('#btn-stop').addClass("disabled");
         }
     );
+
+    interpreter.init();
+    interpreter.start(parseInt($('#inst-per-cycle').val()));
 }
 
 function onStop(event) {
     event.preventDefault();
-
-    stop_requested = true;
+    interpreter.stop();
 }
 
-function optimize(program) {
-    /* remove invalid ops: */
-    var valid_op = function(op) {
-        return '-+<>[],.'.indexOf(op) > -1;
-    }
+// function optimize(program) {
+//     /* remove invalid ops: */
+//     var valid_op = function(op) {
+//         return '-+<>[],.'.indexOf(op) > -1;
+//     }
 
-    program = program.split('').filter(valid_op).join('');
+//     program = program.split('').filter(valid_op).join('');
 
-    return program;
-}
+//     return program;
+// }
 
 // function translate(program) {
 //     var prologue = [
@@ -178,89 +173,131 @@ function optimize(program) {
 //     fun(getchar, putchar);
 // }
 
-function interpret(program, input, inst_per_cycle, 
-                   onOutput, onStart, onTick, onFinish) {
-    program = optimize(program);
+function Interpreter(program, input, onStart, onTick, onFinish) {
+    this.program = program;
+    this.input = input;
+    this.output = '';
 
+    this.onStart = onStart;
+    this.onTick = onTick;
+    this.onFinish = onFinish;
+
+    this.stopRequested = false;
+    this.intervalId = undefined;
+    this.jumps = {};
+    this.state = {
+        memory: {0: 0},
+        ptr: 0,
+        in_ptr: 0,
+        pc: 0,
+    };
+}
+
+Interpreter.prototype.init = function(mem_size) {
     /* precompute jumps: */
-    var jumps = {};
-    for(var pc = 0, stack = []; pc < program.length; ++pc) {
-        var opcode = program[pc];
+    for(var pc = 0, stack = []; pc < this.program.length; ++pc) {
+        var opcode = this.program[pc];
 
         if (opcode == '[') {
             stack.push(pc);
         } else if (opcode == ']') {
             var target = stack.pop();
-            jumps[target] = pc;
-            jumps[pc] = target;
+            this.jumps[target] = pc;
+            this.jumps[pc] = target;
         }
     }
 
-    /* main interpreter loop: */
-    var memory = {0: 0},
-        ptr = 0,
-        in_ptr = 0,
-        pc = 0;
-    
-    for(var i = 0; i < 30000; ++i) {
-        memory[i] = 0;
-    }
+    /* preload memory: */
+    for(var i = 0; i < (mem_size || 30000); ++i) {
+        this.state.memory[i] = 0;
+    }    
+}
 
-    intervalId = setInterval(function() {
-        try {
-            for(var i = 0; i < inst_per_cycle && pc < program.length; i++) {
-                var opcode = program[pc];
-                switch(opcode) {
-                    case '>':
-                        ++ptr;
-                        break;
-                    case '<':
-                        --ptr;
-                        break;
-                    case '+':
-                        memory[ptr]++;
-                        break;
-                    case '-':
-                        memory[ptr]--;
-                        break;
-                    case '.':
-                        onOutput(String.fromCharCode(memory[ptr]));
-                        break;
-                    case ',':
-                        if (in_ptr < input.length) {
-                            memory[ptr] = input.charCodeAt(in_ptr++);
-                        } else {
-                            onTick();
-                            throw "EOF";
-                        }
-                        break;
-                    case '[':
-                        if (memory[ptr] == 0) { 
-                            pc = jumps[pc];
-                        }
-                        break;
-                    case ']':
-                        if (memory[ptr] != 0) {
-                            pc = jumps[pc];
-                        }
-                        break;
-                    default:
-                        throw ("unexpected opcode: " + opcode);
-                }
-                ++pc;
+Interpreter.prototype.runCycle = function(instPerCycle) {
+    try {
+        for(var i = 0; 
+            i < instPerCycle && this.state.pc < this.program.length; 
+            ++i) {
+            var opcode = this.program[this.state.pc];
+            switch(opcode) {
+                case '>':
+                    ++this.state.ptr;
+                    break;
+                case '<':
+                    --this.state.ptr;
+                    break;
+                case '+':
+                    this.state.memory[this.state.ptr]++;
+                    break;
+                case '-':
+                    this.state.memory[this.state.ptr]--;
+                    break;
+                case '.':
+                    this.output += String.fromCharCode(this.state.memory[this.state.ptr]);
+                    break;
+                case ',':
+                    if (this.state.in_ptr < this.input.length) {
+                        this.state.memory[this.state.ptr] = 
+                            this.input.charCodeAt(this.state.in_ptr++);
+                    } else {
+                        this.tick();
+                        throw "EOF";
+                    }
+                    break;
+                case '[':
+                    if (this.state.memory[this.state.ptr] == 0) { 
+                        this.state.pc = this.jumps[this.state.pc];
+                    }
+                    break;
+                case ']':
+                    if (this.state.memory[this.state.ptr] != 0) {
+                        this.state.pc = this.jumps[this.state.pc];
+                    }
+                    break;
+                default:
+                    break;
             }
-
-            onTick();
-
-            if (pc == program.length) {
-                throw "EOP";
-            }
-        } catch(e) {
-            console.log("Received: ", e);
-            onFinish();
-            clearInterval(intervalId);
+            ++this.state.pc;
         }
+
+        this.tick();
+
+        if (this.state.pc == this.program.length) {
+            throw "EOP";
+        }
+    } catch(e) {
+        console.log("Received: ", e);
+        this.finish(e);
+    }
+}
+
+Interpreter.prototype.start = function (instPerCycle) {
+    var self = this;
+
+    this.onStart();
+
+    this.intervalId = setInterval(function () {
+        self.runCycle(instPerCycle)
     }, 0);
+}
 
-    onStart();
+Interpreter.prototype.pause = function () {
+    clearInterval(this.intervalId);    
+}
+
+Interpreter.prototype.stop = function () {
+    this.stopRequested = true;
+}
+
+Interpreter.prototype.tick = function () {
+    if (this.stopRequested) {
+        throw "STOP REQUESTED";
+    }
+
+    this.onTick(this);
+}
+
+Interpreter.prototype.finish = function (e) {
+    clearInterval(this.intervalId);    
+    this.onFinish(e, this);
 }
