@@ -61,6 +61,8 @@ $(document).ready(function () {
 //               });
 // }
 
+var stop_requested = false;
+
 function onStart(event) {
     event.preventDefault();
 
@@ -77,6 +79,7 @@ function onStart(event) {
         },
         function () {
             start = Date.now();
+            stop_requested = false;
             $('#output').val('');
             $('#cycles-count').html(cycles);
             $('#running-time').html("0.00 seconds");
@@ -90,6 +93,11 @@ function onStart(event) {
             $('#output').val(output);
             $('#cycles-count').html(cycles);
             $('#running-time').html(delta.toFixed(2) + " seconds");
+
+            if (stop_requested) {
+                // this will force the interpreter to abort:
+                throw "STOP REQUESTED";
+            }
         },
         function () {
             $('#btn-start').removeClass("disabled");
@@ -100,6 +108,8 @@ function onStart(event) {
 
 function onStop(event) {
     event.preventDefault();
+
+    stop_requested = true;
 }
 
 function optimize(program) {
