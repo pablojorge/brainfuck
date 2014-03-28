@@ -53,11 +53,6 @@ InterpreterUI.prototype.onStart = function() {
     $('#cycles-count').html(this.cycles);
     $('#running-time').html("0.00 seconds");
 
-    $('#btn-start').addClass("disabled");
-    $('#btn-pause').removeClass("disabled");
-    $('#btn-step').addClass("disabled");
-    $('#btn-stop').removeClass("disabled");
-
     this.interpreter = new Interpreter(
         $('#program').val(), 
         $("#input").val(), 
@@ -85,9 +80,12 @@ InterpreterUI.prototype.onTick = function () {
 
 InterpreterUI.prototype.onFinish = function (err) {
     $('#btn-start').removeClass("disabled");
+    $('#btn-start-label').html("Start");
     $('#btn-pause').addClass("disabled");
-    $('#btn-step').addClass("disabled");
+    $('#btn-step').removeClass("disabled");
     $('#btn-stop').addClass("disabled");
+
+    this.state = new UIStopped();
 }
 
 function UIStopped() {}
@@ -95,6 +93,12 @@ function UIStopped() {}
 UIStopped.prototype.start = function() {
     ui.onStart();
     ui.interpreter.start(parseInt($('#inst-per-cycle').val()));
+
+    $('#btn-start').addClass("disabled");
+    $('#btn-pause').removeClass("disabled");
+    $('#btn-step').addClass("disabled");
+    $('#btn-stop').removeClass("disabled");
+
     return new UIRunning();
 }
 
@@ -105,6 +109,13 @@ UIStopped.prototype.pause = function() {
 UIStopped.prototype.step = function() {
     ui.onStart();
     ui.interpreter.step();
+
+    $('#btn-start').removeClass("disabled");
+    $('#btn-start-label').html("Resume");    
+    $('#btn-pause').addClass("disabled");
+    $('#btn-step').removeClass("disabled");
+    $('#btn-stop').removeClass("disabled");
+
     return new UIPaused();
 }
 
@@ -122,6 +133,7 @@ UIRunning.prototype.pause = function() {
     ui.interpreter.pause();
     
     $('#btn-start').removeClass("disabled");
+    $('#btn-start-label').html("Resume");
     $('#btn-pause').addClass("disabled");
     $('#btn-step').removeClass("disabled");
     $('#btn-stop').removeClass("disabled");
@@ -292,6 +304,7 @@ Interpreter.prototype.tick = function () {
 
 Interpreter.prototype.finish = function (e) {
     clearInterval(this.intervalId);
+    this.state = new Stopped(this);
     this.onFinish(e, this);
 }
 
