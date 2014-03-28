@@ -1,72 +1,191 @@
+var ui = new InterpreterUI(); 
+
 $(document).ready(function () {
-    $("#btn-start").click(onStart);
-    $("#btn-stop").click(onStop);
+    $("#btn-start").click(function (event) {
+        event.preventDefault();
+        ui.start();
+    });
+    $("#btn-pause").click(function (event) {
+        event.preventDefault();
+        ui.pause();
+    });
+    $("#btn-step").click(function (event) {
+        event.preventDefault();
+        ui.step();
+    });
+    $("#btn-stop").click(function (event) {
+        event.preventDefault();
+        ui.stop();
+    });
 })
 
-var interpreter = undefined;
+function InterpreterUI() {
+    this.start_date = undefined;
+    this.cycles = 0;
+    this.interpreter = undefined;
+    this.state = new UIStopped();
+}
 
-function onStart(event) {
-    event.preventDefault();
+InterpreterUI.prototype.start = function() {
+    this.state = this.state.start();
+}
 
-    var start = Date.now(),
-        cycles = 0,
-        output = '';
+InterpreterUI.prototype.pause = function() {
+    this.state = this.state.pause();
+}
 
-    interpreter = new Interpreter(
+InterpreterUI.prototype.step = function() {
+    this.state = this.state.step();
+}
+
+InterpreterUI.prototype.stop = function() {
+    this.state = this.state.stop();
+}
+
+InterpreterUI.prototype.onStart = function() {
+    var self = this;
+
+    this.start_date = Date.now();
+    this.cycles = 0;
+
+    $('#output').val('');
+
+    $('#cycles-count').html(this.cycles);
+    $('#running-time').html("0.00 seconds");
+
+    $('#btn-start').addClass("disabled");
+    $('#btn-pause').removeClass("disabled");
+    $('#btn-step').addClass("disabled");
+    $('#btn-stop').removeClass("disabled");
+
+    this.interpreter = new Interpreter(
         $('#program').val(), 
         $("#input").val(), 
-        function () {
-            start = Date.now();
-            $('#output').val('');
-            $('#cycles-count').html(cycles);
-            $('#running-time').html("0.00 seconds");
-            $('#btn-start').addClass("disabled");
-            $('#btn-stop').removeClass("disabled");
+        function() {
+            self.onTick()
         },
-        function (self) {
-            cycles += 1;
-            delta = (Date.now() - start) / 1000;
-
-            // $('#input').get(0).setSelectionRange(in_ptr, in_ptr+1);
-            // $('#program').get(0).setSelectionRange(pc, pc+1);
-
-            $('#output').val(self.output);
-            $('#cycles-count').html(cycles);
-            $('#running-time').html(delta.toFixed(2) + " seconds");
-        },
-        function (err, self) {
-            $('#btn-start').removeClass("disabled");
-            $('#btn-stop').addClass("disabled");
+        function(err) {
+            self.onFinish(err);
         }
     );
-
-    interpreter.init();
-    interpreter.start(parseInt($('#inst-per-cycle').val()));
 }
 
-function onStop(event) {
-    event.preventDefault();
-    interpreter.stop();
+InterpreterUI.prototype.onTick = function () {
+    this.cycles += 1;
+    delta = (Date.now() - this.start_date) / 1000;
+
+    // $('#input').get(0).setSelectionRange(in_ptr, in_ptr+1);
+    $('#program').get(0).setSelectionRange(this.interpreter.pc, 
+                                           this.interpreter.pc+1);
+
+    $('#output').val(this.interpreter.output);
+    $('#cycles-count').html(this.cycles);
+    $('#running-time').html(delta.toFixed(2) + " seconds");
 }
 
-function Interpreter(program, input, onStart, onTick, onFinish) {
+InterpreterUI.prototype.onFinish = function (err) {
+    $('#btn-start').removeClass("disabled");
+    $('#btn-pause').addClass("disabled");
+    $('#btn-step').addClass("disabled");
+    $('#btn-stop').addClass("disabled");
+}
+
+function UIStopped() {}
+
+UIStopped.prototype.start = function() {
+    ui.onStart();
+    ui.interpreter.start(parseInt($('#inst-per-cycle').val()));
+    return new UIRunning();
+}
+
+UIStopped.prototype.pause = function() {
+    throw "Invalid transition";
+}
+
+UIStopped.prototype.step = function() {
+    ui.onStart();
+    ui.interpreter.step();
+    return new UIPaused();
+}
+
+UIStopped.prototype.stop = function() {
+    throw "Invalid transition";
+}
+
+function UIRunning() {}
+
+UIRunning.prototype.start = function() {
+    throw "Invalid transition";
+}
+
+UIRunning.prototype.pause = function() {
+    ui.interpreter.pause();
+    
+    $('#btn-start').removeClass("disabled");
+    $('#btn-pause').addClass("disabled");
+    $('#btn-step').removeClass("disabled");
+    $('#btn-stop').removeClass("disabled");
+
+    return new UIPaused();
+}
+
+UIRunning.prototype.step = function() {
+    throw "Invalid transition";
+}
+
+UIRunning.prototype.stop = function() {
+    ui.interpreter.stop();
+    return new UIStopped();
+}
+
+function UIPaused() {}
+
+UIPaused.prototype.start = function () {
+    ui.interpreter.start(parseInt($('#inst-per-cycle').val()));
+
+    $('#btn-start').addClass("disabled");
+    $('#btn-pause').removeClass("disabled");
+    $('#btn-step').addClass("disabled");
+    $('#btn-stop').removeClass("disabled");
+
+    return new UIRunning();
+}
+
+UIPaused.prototype.pause = function () {
+    throw "Invalid transition";
+}
+
+UIPaused.prototype.step = function () {
+    ui.interpreter.step();
+    return this;
+}
+
+UIPaused.prototype.stop = function () {
+    ui.interpreter.stop();
+    return new UIStopped();
+}
+
+////////////
+function Interpreter(program, input, onTick, onFinish) {
     this.program = program;
     this.input = input;
     this.output = '';
 
-    this.onStart = onStart;
     this.onTick = onTick;
     this.onFinish = onFinish;
 
     this.stopRequested = false;
     this.intervalId = undefined;
     this.jumps = {};
-    this.state = {
-        memory: {0: 0},
-        ptr: 0,
-        in_ptr: 0,
-        pc: 0,
-    };
+
+    this.memory = {0: 0};
+    this.mem_ptr = 0;
+    this.input_ptr = 0;
+    this.pc = 0;
+
+    this.state = new Stopped(this);
+
+    this.init();
 }
 
 Interpreter.prototype.init = function(mem_size) {
@@ -85,60 +204,60 @@ Interpreter.prototype.init = function(mem_size) {
 
     /* preload memory: */
     for(var i = 0; i < (mem_size || 30000); ++i) {
-        this.state.memory[i] = 0;
+        this.memory[i] = 0;
     }    
 }
 
 Interpreter.prototype.runCycle = function(instPerCycle) {
     try {
         for(var i = 0; 
-            i < instPerCycle && this.state.pc < this.program.length; 
+            i < instPerCycle && this.pc < this.program.length; 
             ++i) {
-            var opcode = this.program[this.state.pc];
+            var opcode = this.program[this.pc];
             switch(opcode) {
                 case '>':
-                    ++this.state.ptr;
+                    ++this.mem_ptr;
                     break;
                 case '<':
-                    --this.state.ptr;
+                    --this.mem_ptr;
                     break;
                 case '+':
-                    this.state.memory[this.state.ptr]++;
+                    this.memory[this.mem_ptr]++;
                     break;
                 case '-':
-                    this.state.memory[this.state.ptr]--;
+                    this.memory[this.mem_ptr]--;
                     break;
                 case '.':
-                    this.output += String.fromCharCode(this.state.memory[this.state.ptr]);
+                    this.output += String.fromCharCode(this.memory[this.mem_ptr]);
                     break;
                 case ',':
-                    if (this.state.in_ptr < this.input.length) {
-                        this.state.memory[this.state.ptr] = 
-                            this.input.charCodeAt(this.state.in_ptr++);
+                    if (this.input_ptr < this.input.length) {
+                        this.memory[this.mem_ptr] = 
+                            this.input.charCodeAt(this.input_ptr++);
                     } else {
                         this.tick();
                         throw "EOF";
                     }
                     break;
                 case '[':
-                    if (this.state.memory[this.state.ptr] == 0) { 
-                        this.state.pc = this.jumps[this.state.pc];
+                    if (this.memory[this.mem_ptr] == 0) { 
+                        this.pc = this.jumps[this.pc];
                     }
                     break;
                 case ']':
-                    if (this.state.memory[this.state.ptr] != 0) {
-                        this.state.pc = this.jumps[this.state.pc];
+                    if (this.memory[this.mem_ptr] != 0) {
+                        this.pc = this.jumps[this.pc];
                     }
                     break;
                 default:
                     break;
             }
-            ++this.state.pc;
+            ++this.pc;
         }
 
         this.tick();
 
-        if (this.state.pc == this.program.length) {
+        if (this.pc == this.program.length) {
             throw "EOP";
         }
     } catch(e) {
@@ -148,21 +267,19 @@ Interpreter.prototype.runCycle = function(instPerCycle) {
 }
 
 Interpreter.prototype.start = function (instPerCycle) {
-    var self = this;
-
-    this.onStart();
-
-    this.intervalId = setInterval(function () {
-        self.runCycle(instPerCycle)
-    }, 0);
+    this.state = this.state.start(instPerCycle);
 }
 
 Interpreter.prototype.pause = function () {
-    clearInterval(this.intervalId);    
+    this.state = this.state.pause();
+}
+
+Interpreter.prototype.step = function () {
+    this.state = this.state.step();
 }
 
 Interpreter.prototype.stop = function () {
-    this.stopRequested = true;
+    this.state = this.state.stop();
 }
 
 Interpreter.prototype.tick = function () {
@@ -174,6 +291,86 @@ Interpreter.prototype.tick = function () {
 }
 
 Interpreter.prototype.finish = function (e) {
-    clearInterval(this.intervalId);    
+    clearInterval(this.intervalId);
     this.onFinish(e, this);
+}
+
+////
+function Stopped(interpreter) {
+    this.interpreter = interpreter;
+}
+
+Stopped.prototype.start = function (instPerCycle) {
+    var self = this;
+
+    this.interpreter.intervalId = setInterval(function () {
+        self.interpreter.runCycle(instPerCycle);
+    }, 0);
+
+    return new Running(this.interpreter);
+}
+
+Stopped.prototype.pause = function () {
+    throw "Invalid transition";
+}
+
+Stopped.prototype.step = function () {
+    this.interpreter.runCycle(1);
+    return new Paused(this.interpreter);
+}
+
+Stopped.prototype.stop = function () {
+    throw "Invalid transition";
+}
+
+////
+function Running(interpreter) {
+    this.interpreter = interpreter;
+}
+
+Running.prototype.start = function () {
+    throw "Invalid transition";
+}
+
+Running.prototype.pause = function () {
+    clearInterval(this.interpreter.intervalId);
+    return new Paused(this.interpreter);
+}
+
+Running.prototype.step = function () {
+    throw "Invalid transition";
+}
+
+Running.prototype.stop = function () {
+    this.interpreter.stopRequested = true;
+    return new Stopped(this.interpreter);
+}
+
+////
+function Paused(interpreter) {
+    this.interpreter = interpreter;
+}
+
+Paused.prototype.start = function (instPerCycle) {
+    var self = this;
+
+    this.interpreter.intervalId = setInterval(function () {
+        self.interpreter.runCycle(instPerCycle);
+    }, 0);
+
+    return new Running(this.interpreter);    
+}
+
+Paused.prototype.paused = function () {
+    throw "Invalid transition";
+}
+
+Paused.prototype.step = function () {
+    this.interpreter.runCycle(1);
+    return this;
+}
+
+Paused.prototype.stop = function () {
+    this.interpreter.finish();
+    return new Stopped(this.interpreter);
 }
