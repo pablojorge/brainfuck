@@ -56,7 +56,7 @@ function optimize(program) {
     return program;
 }
 
-function renderMemory(memory, limit) {
+function renderMemory(memory, current, limit) {
     var ret = '';
 
     function zeropad(string, length) {
@@ -68,12 +68,13 @@ function renderMemory(memory, limit) {
     }
 
     for (var row = 0; (row * 8) < limit; ++row) {
-        ret += '0x' + zeropad((row * 8).toString(16), 6) + '  ';
+        ret += zeropad((row * 8).toString(16), 6) + ' ';
         for (var column = 0; 
              column < 8 && (row * 8 + column) < limit; 
              ++column) {
-            var byte = memory[row * 8 + column];
-            ret += zeropad(byte.toString(16), 2) + ' ';
+            var index = row * 8 + column,
+                prefix = index == current ? '*' : ' ';
+            ret += prefix + zeropad(memory[index].toString(16), 2) + ' ';
         }
         ret += '\n';
     }
@@ -134,7 +135,9 @@ InterpreterUI.prototype.onTick = function () {
     $('#program').get(0).setSelectionRange(this.interpreter.pc, 
                                            this.interpreter.pc+1);
 
-    $('#debug').html(renderMemory(this.interpreter.memory, 512));
+    $('#debug').html(renderMemory(this.interpreter.memory, 
+                                  this.interpreter.mem_ptr, 
+                                  512));
     $('#output').val(this.interpreter.output);
     $('#program-counter').html(this.interpreter.pc);
     $('#memory-ptr').html(this.interpreter.mem_ptr);
