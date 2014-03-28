@@ -17,7 +17,28 @@ $(document).ready(function () {
         event.preventDefault();
         ui.stop();
     });
+
+    resizePanels();
 })
+
+$(window).resize(function (event) {
+    resizePanels();
+});
+
+function resizePanels() {
+    var height = $(window).height() + 30;
+
+    $('#program').css('height', 0);
+    $('#input').css('height', 0);
+    $('#output').css('height', 0);
+
+    height -= ($('#button-bar').height() + 
+               $('#panels-body').height());
+
+    $('#program').css('height', height * .3);
+    $('#input').css('height', height * .3);
+    $('#output').css('height', height * .7);
+}
 
 function InterpreterUI() {
     this.start_date = undefined;
