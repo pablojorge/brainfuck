@@ -98,7 +98,7 @@ InterpreterUI.prototype.pause = function() {
 }
 
 InterpreterUI.prototype.step = function() {
-    this.state = this.state.step();
+    this.state = this.state.step() || this.state;
 }
 
 InterpreterUI.prototype.stop = function() {
@@ -237,7 +237,7 @@ UIPaused.prototype.pause = function () {
 
 UIPaused.prototype.step = function () {
     ui.interpreter.step();
-    return this;
+    return undefined;
 }
 
 UIPaused.prototype.stop = function () {
@@ -355,7 +355,7 @@ Interpreter.prototype.pause = function () {
 }
 
 Interpreter.prototype.step = function () {
-    this.state = this.state.step();
+    this.state = this.state.step() || this.state;
 }
 
 Interpreter.prototype.stop = function () {
@@ -448,7 +448,7 @@ Paused.prototype.paused = function () {
 
 Paused.prototype.step = function () {
     this.interpreter.runCycle(1);
-    return this;
+    return undefined;
 }
 
 Paused.prototype.stop = function () {
