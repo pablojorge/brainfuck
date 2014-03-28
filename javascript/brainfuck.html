@@ -62,7 +62,15 @@
                                      padding-top: 15px;">
           <div class="panel panel-default">
             <div class="panel-heading">
-              <h5>Program</h5>
+              <h5>
+                Program
+                <div style="float: right; margin-top: -10px;">
+                  <button class="btn btn-primary" id="btn-optimize">
+                    <span class="glyphicon glyphicon-flash"></span>
+                    Optimize
+                  </button>
+                </div>
+              </h5>
             </div>
             <div class="panel-body">
               <textarea wrap=off id="program">+[,.]</textarea>
@@ -84,8 +92,31 @@
         </div>
       </div>
       <div class="row">
-        <div class="col-md-12" style="padding-left: 15px; 
-                                      padding-right: 15px;">
+        <div class="col-md-4" style="padding-left: 15px; 
+                                     padding-right: 7px;">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h5> 
+                Debug
+                <small>
+                  PC: 
+                  <span id="program-counter" class="badge">0</span>
+                  Ptr: 
+                </small>
+                <span id="memory-ptr" class="badge">0</span>
+                <small>
+                  In Ptr: 
+                </small>
+                <span id="input-ptr" class="badge">0</span>
+              </h5>
+            </div>
+            <div class="panel-body">
+              <textarea wrap=off id="debug" readonly></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-8" style="padding-left: 7px; 
+                                     padding-right: 15px;">
           <div class="panel panel-default">
             <div class="panel-heading">
               <h5>

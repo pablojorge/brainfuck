@@ -17,7 +17,10 @@ $(document).ready(function () {
         event.preventDefault();
         ui.stop();
     });
-
+    $("#btn-optimize").click(function (event) {
+        event.preventDefault();
+        $('#program').val(optimize($('#program').val()));
+    });
     resizePanels();
 })
 
@@ -30,6 +33,7 @@ function resizePanels() {
 
     $('#program').css('height', 0);
     $('#input').css('height', 0);
+    $('#debug').css('height', 0);
     $('#output').css('height', 0);
 
     height -= ($('#button-bar').height() + 
@@ -37,7 +41,44 @@ function resizePanels() {
 
     $('#program').css('height', height * .3);
     $('#input').css('height', height * .3);
+    $('#debug').css('height', height * .7);
     $('#output').css('height', height * .7);
+}
+
+function optimize(program) {
+    /* remove invalid ops: */
+    var valid_op = function(op) {
+        return '-+<>[],.'.indexOf(op) > -1;
+    }
+
+    program = program.split('').filter(valid_op).join('');
+
+    return program;
+}
+
+function renderMemory(memory, limit) {
+    var ret = '';
+
+    function zeropad(string, length) {
+        while(string.length < length) {
+            string = '0' + string;
+        }
+
+        return string;
+    }
+
+    for (var row = 0; (row * 8) < limit; ++row) {
+        ret += '0x' + zeropad((row * 8).toString(16), 6) + '  ';
+        for (var column = 0; 
+             column < 8 && (row * 8 + column) < limit; 
+             ++column) {
+            var byte = memory[row * 8 + column];
+            ret += zeropad(byte.toString(16), 2) + ' ';
+        }
+        ret += '\n';
+    }
+
+    return ret;
 }
 
 function InterpreterUI() {
@@ -90,11 +131,14 @@ InterpreterUI.prototype.onTick = function () {
     this.cycles += 1;
     delta = (Date.now() - this.start_date) / 1000;
 
-    // $('#input').get(0).setSelectionRange(in_ptr, in_ptr+1);
     $('#program').get(0).setSelectionRange(this.interpreter.pc, 
                                            this.interpreter.pc+1);
 
+    $('#debug').html(renderMemory(this.interpreter.memory, 512));
     $('#output').val(this.interpreter.output);
+    $('#program-counter').html(this.interpreter.pc);
+    $('#memory-ptr').html(this.interpreter.mem_ptr);
+    $('#input-ptr').html(this.interpreter.input_ptr);
     $('#cycles-count').html(this.cycles);
     $('#running-time').html(delta.toFixed(2) + " seconds");
 }
