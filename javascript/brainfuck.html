@@ -31,9 +31,18 @@
         </div>
         <div class="navbar-collapse collapse">
           <form class="navbar-form navbar-right">
-            <span>Instructions per cycle:</span>
+            <small>Instructions per cycle:</small>
             <input type="number" class="form-control" 
-                   value="1" id="inst-per-cycle" min="1">
+                   value="1" min="1" id="inst-per-cycle"
+                   style="width: 100px;">
+            <small>Cycle delay (ms):</small>
+            <input type="number" class="form-control" 
+                   value="0" min="0" id="cycle-delay"
+                   style="width: 80px;">
+            <small>Memory size:</small>
+            <input type="number" class="form-control" 
+                   value="512" min="1" id="memory-size"
+                   style="width: 80px;">
             <button class="btn btn-success" id="btn-start">
               <span class="glyphicon glyphicon-play"></span>
               <span id="btn-start-label">Start</span>
@@ -110,7 +119,7 @@
               </h5>
             </div>
             <div class="panel-body">
-              <textarea wrap=off id="debug" readonly></textarea>
+              <textarea wrap=off id="memory" readonly></textarea>
             </div>
           </div>
         </div>

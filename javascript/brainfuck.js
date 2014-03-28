@@ -33,7 +33,7 @@ function resizePanels() {
 
     $('#program').css('height', 0);
     $('#input').css('height', 0);
-    $('#debug').css('height', 0);
+    $('#memory').css('height', 0);
     $('#output').css('height', 0);
 
     height -= ($('#button-bar').height() + 
@@ -41,7 +41,7 @@ function resizePanels() {
 
     $('#program').css('height', height * .3);
     $('#input').css('height', height * .3);
-    $('#debug').css('height', height * .7);
+    $('#memory').css('height', height * .7);
     $('#output').css('height', height * .7);
 }
 
@@ -119,6 +119,7 @@ InterpreterUI.prototype.onStart = function() {
     this.interpreter = new Interpreter(
         $('#program').val(), 
         $("#input").val(), 
+        parseInt($('#memory-size').val()),
         function() {
             self.onTick()
         },
@@ -135,9 +136,9 @@ InterpreterUI.prototype.onTick = function () {
     $('#program').get(0).setSelectionRange(this.interpreter.pc, 
                                            this.interpreter.pc+1);
 
-    $('#debug').html(renderMemory(this.interpreter.memory, 
-                                  this.interpreter.mem_ptr, 
-                                  512));
+    $('#memory').html(renderMemory(this.interpreter.memory, 
+                                   this.interpreter.mem_ptr, 
+                                   this.interpreter.mem_size));
     $('#output').val(this.interpreter.output);
     $('#program-counter').html(this.interpreter.pc);
     $('#memory-ptr').html(this.interpreter.mem_ptr);
@@ -153,6 +154,8 @@ InterpreterUI.prototype.onFinish = function (err) {
     $('#btn-step').removeClass("disabled");
     $('#btn-stop').addClass("disabled");
 
+    $('#output').val($('#output').val() + err);
+
     this.state = new UIStopped();
 }
 
@@ -160,7 +163,8 @@ function UIStopped() {}
 
 UIStopped.prototype.start = function() {
     ui.onStart();
-    ui.interpreter.start(parseInt($('#inst-per-cycle').val()));
+    ui.interpreter.start(parseInt($('#inst-per-cycle').val()),
+                         parseInt($('#cycle-delay').val()));
 
     $('#btn-start').addClass("disabled");
     $('#btn-pause').removeClass("disabled");
@@ -221,7 +225,8 @@ UIRunning.prototype.stop = function() {
 function UIPaused() {}
 
 UIPaused.prototype.start = function () {
-    ui.interpreter.start(parseInt($('#inst-per-cycle').val()));
+    ui.interpreter.start(parseInt($('#inst-per-cycle').val()),
+                         parseInt($('#cycle-delay').val()));
 
     $('#btn-start').addClass("disabled");
     $('#btn-pause').removeClass("disabled");
@@ -246,9 +251,10 @@ UIPaused.prototype.stop = function () {
 }
 
 ////////////
-function Interpreter(program, input, onTick, onFinish) {
+function Interpreter(program, input, mem_size, onTick, onFinish) {
     this.program = program;
     this.input = input;
+    this.mem_size = mem_size;
     this.output = '';
 
     this.onTick = onTick;
@@ -265,7 +271,7 @@ function Interpreter(program, input, onTick, onFinish) {
 
     this.state = new Stopped(this);
 
-    this.init();
+    this.init(mem_size);
 }
 
 Interpreter.prototype.init = function(mem_size) {
@@ -283,7 +289,7 @@ Interpreter.prototype.init = function(mem_size) {
     }
 
     /* preload memory: */
-    for(var i = 0; i < (mem_size || 30000); ++i) {
+    for(var i = 0; i < mem_size; ++i) {
         this.memory[i] = 0;
     }    
 }
@@ -346,8 +352,8 @@ Interpreter.prototype.runCycle = function(instPerCycle) {
     }
 }
 
-Interpreter.prototype.start = function (instPerCycle) {
-    this.state = this.state.start(instPerCycle);
+Interpreter.prototype.start = function (instPerCycle, cycleDelay) {
+    this.state = this.state.start(instPerCycle, cycleDelay);
 }
 
 Interpreter.prototype.pause = function () {
@@ -381,12 +387,12 @@ function Stopped(interpreter) {
     this.interpreter = interpreter;
 }
 
-Stopped.prototype.start = function (instPerCycle) {
+Stopped.prototype.start = function (instPerCycle, cycleDelay) {
     var self = this;
 
     this.interpreter.intervalId = setInterval(function () {
         self.interpreter.runCycle(instPerCycle);
-    }, 0);
+    }, cycleDelay);
 
     return new Running(this.interpreter);
 }
@@ -432,12 +438,12 @@ function Paused(interpreter) {
     this.interpreter = interpreter;
 }
 
-Paused.prototype.start = function (instPerCycle) {
+Paused.prototype.start = function (instPerCycle, cycleDelay) {
     var self = this;
 
     this.interpreter.intervalId = setInterval(function () {
         self.interpreter.runCycle(instPerCycle);
-    }, 0);
+    }, cycleDelay);
 
     return new Running(this.interpreter);    
 }
