@@ -381,14 +381,20 @@ Interpreter.prototype.runCycle = function(instPerCycle) {
             ++this.pc;
         }
 
+        this.cycles += 1;
+
         if (this.pc == this.program.length) {
             throw new SucessResult("EOP");
         }
 
-        this.tick();
+        if (this.stopRequested) {
+            throw new SucessResult("STOP");
+        }
+
+        this.onTick(this);
     } catch(r) {
         console.log("Result: ", r);
-        this.tick();
+        this.onTick();
         this.finish(r);
     }
 }
@@ -407,16 +413,6 @@ Interpreter.prototype.step = function (program, input) {
 
 Interpreter.prototype.stop = function () {
     this.state = this.state.stop();
-}
-
-Interpreter.prototype.tick = function () {
-    this.cycles += 1;
-
-    if (this.stopRequested) {
-        throw new SucessResult("STOP");
-    }
-
-    this.onTick(this);
 }
 
 Interpreter.prototype.finish = function (e) {
