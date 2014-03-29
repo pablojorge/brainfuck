@@ -117,6 +117,10 @@ InterpreterUI.prototype.onStart = function() {
 
     $('#cycles-count').html(this.cycles);
     $('#running-time').html("0.00 seconds");
+    $('#result').removeClass('label-danger')
+                .removeClass('label-success')
+                .addClass('label-default');
+    $('#result').html("N/A");
 
     this.interpreter = new Interpreter(
         $('#program').val(), 
@@ -149,7 +153,7 @@ InterpreterUI.prototype.onTick = function () {
     $('#running-time').html(delta.toFixed(2) + " seconds");
 }
 
-InterpreterUI.prototype.onFinish = function (err) {
+InterpreterUI.prototype.onFinish = function (result) {
     $('#btn-start').removeClass("disabled");
     $('#btn-start-label').html("Start");
     $('#btn-pause').addClass("disabled");
@@ -157,7 +161,11 @@ InterpreterUI.prototype.onFinish = function (err) {
     $('#btn-stop').addClass("disabled");
     $("#btn-optimize").removeClass("disabled");
 
-    $('#output').val($('#output').val() + err);
+    $('#result').removeClass('label-default');
+    $('#result').addClass(result.error 
+                            ? 'label-danger' 
+                            : 'label-success');
+    $('#result').html(result.msg);
 
     this.state = new UIStopped();
 }
@@ -292,6 +300,16 @@ Interpreter.prototype.init = function() {
     }
 }
 
+function ErrorResult (msg) {
+    this.error = true;
+    this.msg = msg;
+}
+
+function SucessResult (msg) {
+    this.error = false;
+    this.msg = msg;
+}
+
 Interpreter.prototype.runCycle = function(instPerCycle) {
     try {
         for(var i = 0; 
@@ -300,20 +318,25 @@ Interpreter.prototype.runCycle = function(instPerCycle) {
             var opcode = this.program[this.pc];
             switch(opcode) {
                 case '>':
-                    ++this.mem_ptr;
-                    if(this.mem_ptr == this.mem_size) {
+                    if(++this.mem_ptr == this.mem_size) {
                         this.memory[this.mem_ptr] = 0;
                         ++this.mem_size;
                     } 
                     break;
                 case '<':
-                    --this.mem_ptr;
+                    if(--this.mem_ptr < 0) {
+                        throw new ErrorResult("OOB");
+                    }
                     break;
                 case '+':
-                    this.memory[this.mem_ptr]++;
+                    if(++this.memory[this.mem_ptr] > 0xff) {
+                        this.memory[this.mem_ptr] = 0;
+                    }
                     break;
                 case '-':
-                    this.memory[this.mem_ptr]--;
+                    if(--this.memory[this.mem_ptr] < 0) {
+                        throw new ErrorResult("NEG");
+                    }
                     break;
                 case '.':
                     this.output += String.fromCharCode(this.memory[this.mem_ptr]);
@@ -323,18 +346,23 @@ Interpreter.prototype.runCycle = function(instPerCycle) {
                         this.memory[this.mem_ptr] = 
                             this.input.charCodeAt(this.input_ptr++);
                     } else {
-                        this.tick();
-                        throw "EOF";
+                        throw new SucessResult("EOF");
                     }
                     break;
                 case '[':
                     if (this.memory[this.mem_ptr] == 0) { 
                         this.pc = this.jumps[this.pc];
                     }
+                    if (this.pc == undefined) {
+                        throw new ErrorResult("MISMATCH");
+                    }
                     break;
                 case ']':
                     if (this.memory[this.mem_ptr] != 0) {
                         this.pc = this.jumps[this.pc];
+                    }
+                    if (this.pc == undefined) {
+                        throw new ErrorResult("MISMATCH");
                     }
                     break;
                 default:
@@ -343,14 +371,15 @@ Interpreter.prototype.runCycle = function(instPerCycle) {
             ++this.pc;
         }
 
-        this.tick();
-
         if (this.pc == this.program.length) {
-            throw "EOP";
+            throw new SucessResult("EOP");
         }
-    } catch(e) {
-        console.log("Received: ", e);
-        this.finish(e);
+
+        this.tick();
+    } catch(r) {
+        console.log("Result: ", r);
+        this.tick();
+        this.finish(r);
     }
 }
 
@@ -372,7 +401,7 @@ Interpreter.prototype.stop = function () {
 
 Interpreter.prototype.tick = function () {
     if (this.stopRequested) {
-        throw "STOP REQUESTED";
+        throw new SucessResult("STOP");
     }
 
     this.onTick(this);
@@ -460,6 +489,6 @@ Paused.prototype.step = function () {
 }
 
 Paused.prototype.stop = function () {
-    this.interpreter.finish("STOP FORCED");
+    this.interpreter.finish(new SucessResult("STOP"));
     return new Stopped(this.interpreter);
 }
