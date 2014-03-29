@@ -56,16 +56,16 @@ function optimize(program) {
     return program;
 }
 
+function zeropad(string, length) {
+    while(string.length < length) {
+        string = '0' + string;
+    }
+
+    return string;
+}
+
 function renderMemory(memory, current, size) {
     var ret = '';
-
-    function zeropad(string, length) {
-        while(string.length < length) {
-            string = '0' + string;
-        }
-
-        return string;
-    }
 
     for (var row = 0; (row * 8) < size; ++row) {
         ret += zeropad((row * 8).toString(16), 6) + ' ';
@@ -83,8 +83,6 @@ function renderMemory(memory, current, size) {
 }
 
 function InterpreterUI() {
-    this.start_date = undefined;
-    this.cycles = 0;
     this.interpreter = undefined;
     this.state = new UIStopped();
 }
@@ -108,14 +106,11 @@ InterpreterUI.prototype.stop = function() {
 InterpreterUI.prototype.onStart = function() {
     var self = this;
 
-    this.start_date = Date.now();
-    this.cycles = 0;
-
     $('#output').val('');
 
     $("#btn-optimize").addClass('disabled');
 
-    $('#cycles-count').html(this.cycles);
+    $('#cycles-count').html('0');
     $('#running-time').html("0.00 seconds");
     $('#result').removeClass('label-danger')
                 .removeClass('label-success')
@@ -135,8 +130,9 @@ InterpreterUI.prototype.onStart = function() {
 }
 
 InterpreterUI.prototype.onTick = function () {
-    this.cycles += 1;
-    delta = (Date.now() - this.start_date) / 1000;
+    var self = this;
+
+    delta = (Date.now() - this.interpreter.start_date) / 1000;
 
     $('#program').get(0).setSelectionRange(this.interpreter.pc, 
                                            this.interpreter.pc+1);
@@ -146,10 +142,18 @@ InterpreterUI.prototype.onTick = function () {
                                    this.interpreter.mem_size));
     $('#output').val(this.interpreter.output);
     $('#program-counter').html(this.interpreter.pc);
+    $('#program-opcode').html(this.interpreter.program[this.interpreter.pc]);
     $('#memory-ptr').html(this.interpreter.mem_ptr);
     $('#memory-size').html(this.interpreter.mem_size);
+    $('#memory-value').html((function () {
+        var value = self.interpreter.memory[self.interpreter.mem_ptr];
+        return "0x" + zeropad(value.toString(16), 2) + " (" + value + ")";
+    })());
     $('#input-ptr').html(this.interpreter.input_ptr);
-    $('#cycles-count').html(this.cycles);
+    $('#input-value').html(
+        "'" + this.interpreter.input[this.interpreter.input_ptr] + "'"
+    );
+    $('#cycles-count').html(this.interpreter.cycles);
     $('#running-time').html(delta.toFixed(2) + " seconds");
 }
 
@@ -191,7 +195,8 @@ UIStopped.prototype.pause = function() {
 
 UIStopped.prototype.step = function() {
     ui.onStart();
-    ui.interpreter.step();
+    ui.interpreter.step($('#program').val(),
+                        $('#input').val());
 
     $('#btn-start').removeClass("disabled");
     $('#btn-start-label').html("Resume");    
@@ -252,7 +257,8 @@ UIPaused.prototype.pause = function () {
 }
 
 UIPaused.prototype.step = function () {
-    ui.interpreter.step();
+    ui.interpreter.step($('#program').val(),
+                        $('#input').val());
     return undefined;
 }
 
@@ -263,15 +269,16 @@ UIPaused.prototype.stop = function () {
 
 ////////////
 function Interpreter(program, input, onTick, onFinish) {
-    this.program = program;
-    this.input = input;
+    this.load(program, input);
 
     this.onTick = onTick;
     this.onFinish = onFinish;
 
     this.stopRequested = false;
     this.intervalId = undefined;
-    this.jumps = {};
+
+    this.start_date = Date.now();
+    this.cycles = 0;
 
     this.memory = {0: 0};
     this.mem_ptr = 0;
@@ -281,11 +288,14 @@ function Interpreter(program, input, onTick, onFinish) {
     this.output = '';
 
     this.state = new Stopped(this);
-
-    this.init();
 }
 
-Interpreter.prototype.init = function() {
+Interpreter.prototype.load = function(program, input) {
+    this.program = program;
+    this.input = input;
+
+    this.jumps = {};
+
     /* precompute jumps: */
     for(var pc = 0, stack = []; pc < this.program.length; ++pc) {
         var opcode = this.program[pc];
@@ -391,8 +401,8 @@ Interpreter.prototype.pause = function () {
     this.state = this.state.pause();
 }
 
-Interpreter.prototype.step = function () {
-    this.state = this.state.step() || this.state;
+Interpreter.prototype.step = function (program, input) {
+    this.state = this.state.step(program, input) || this.state;
 }
 
 Interpreter.prototype.stop = function () {
@@ -400,6 +410,8 @@ Interpreter.prototype.stop = function () {
 }
 
 Interpreter.prototype.tick = function () {
+    this.cycles += 1;
+
     if (this.stopRequested) {
         throw new SucessResult("STOP");
     }
@@ -432,7 +444,8 @@ Stopped.prototype.pause = function () {
     throw "Invalid transition";
 }
 
-Stopped.prototype.step = function () {
+Stopped.prototype.step = function (program, input) {
+    this.interpreter.load(program, input);
     this.interpreter.runCycle(1);
     return new Paused(this.interpreter);
 }
@@ -483,7 +496,8 @@ Paused.prototype.paused = function () {
     throw "Invalid transition";
 }
 
-Paused.prototype.step = function () {
+Paused.prototype.step = function (program, input) {
+    this.interpreter.load(program, input);
     this.interpreter.runCycle(1);
     return undefined;
 }
