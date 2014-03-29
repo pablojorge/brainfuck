@@ -39,10 +39,6 @@
             <input type="number" class="form-control" 
                    value="0" min="0" id="cycle-delay"
                    style="width: 80px;">
-            <small>Memory size:</small>
-            <input type="number" class="form-control" 
-                   value="512" min="1" id="memory-size"
-                   style="width: 80px;">
             <button class="btn btn-success" id="btn-start">
               <span class="glyphicon glyphicon-play"></span>
               <span id="btn-start-label">Start</span>
@@ -73,6 +69,8 @@
             <div class="panel-heading">
               <h5>
                 Program
+                <small> PC: </small>
+                <span id="program-counter" class="badge">0</span>
                 <div style="float: right; margin-top: -10px;">
                   <button class="btn btn-primary" id="btn-optimize">
                     <span class="glyphicon glyphicon-flash"></span>
@@ -91,7 +89,11 @@
                                      padding-top: 15px;">
           <div class="panel panel-default">
             <div class="panel-heading">
-              <h5>Input</h5>
+              <h5>
+                Input
+                <small> In Ptr: </small>
+                <span id="input-ptr" class="badge">0</span>
+              </h5>
             </div>
             <div class="panel-body">
               <textarea wrap=off id="input">1234</textarea>
@@ -105,17 +107,11 @@
           <div class="panel panel-default">
             <div class="panel-heading">
               <h5> 
-                Debug
-                <small>
-                  PC: 
-                  <span id="program-counter" class="badge">0</span>
-                  Ptr: 
-                </small>
+                Memory
+                <small> Mem Ptr: </small> 
                 <span id="memory-ptr" class="badge">0</span>
-                <small>
-                  In Ptr: 
-                </small>
-                <span id="input-ptr" class="badge">0</span>
+                <small> Mem Size: </small> 
+                <span id="memory-size" class="badge">0</span>
               </h5>
             </div>
             <div class="panel-body">
@@ -129,11 +125,9 @@
             <div class="panel-heading">
               <h5>
                 Output 
-                <small>
-                  Cycles: 
-                  <span id="cycles-count" class="badge">0</span>
-                  Running time: 
-                </small>
+                <small> Cycles: </small>
+                <span id="cycles-count" class="badge">0</span>
+                <small> Running time: </small>
                 <span id="running-time" class="label label-default">
                   0.00 seconds
                 </span>

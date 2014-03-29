@@ -56,7 +56,7 @@ function optimize(program) {
     return program;
 }
 
-function renderMemory(memory, current, limit) {
+function renderMemory(memory, current, size) {
     var ret = '';
 
     function zeropad(string, length) {
@@ -67,10 +67,10 @@ function renderMemory(memory, current, limit) {
         return string;
     }
 
-    for (var row = 0; (row * 8) < limit; ++row) {
+    for (var row = 0; (row * 8) < size; ++row) {
         ret += zeropad((row * 8).toString(16), 6) + ' ';
         for (var column = 0; 
-             column < 8 && (row * 8 + column) < limit; 
+             column < 8 && (row * 8 + column) < size; 
              ++column) {
             var index = row * 8 + column,
                 prefix = index == current ? '*' : ' ';
@@ -113,13 +113,14 @@ InterpreterUI.prototype.onStart = function() {
 
     $('#output').val('');
 
+    $("#btn-optimize").addClass('disabled');
+
     $('#cycles-count').html(this.cycles);
     $('#running-time').html("0.00 seconds");
 
     this.interpreter = new Interpreter(
         $('#program').val(), 
         $("#input").val(), 
-        parseInt($('#memory-size').val()),
         function() {
             self.onTick()
         },
@@ -142,6 +143,7 @@ InterpreterUI.prototype.onTick = function () {
     $('#output').val(this.interpreter.output);
     $('#program-counter').html(this.interpreter.pc);
     $('#memory-ptr').html(this.interpreter.mem_ptr);
+    $('#memory-size').html(this.interpreter.mem_size);
     $('#input-ptr').html(this.interpreter.input_ptr);
     $('#cycles-count').html(this.cycles);
     $('#running-time').html(delta.toFixed(2) + " seconds");
@@ -153,6 +155,7 @@ InterpreterUI.prototype.onFinish = function (err) {
     $('#btn-pause').addClass("disabled");
     $('#btn-step').removeClass("disabled");
     $('#btn-stop').addClass("disabled");
+    $("#btn-optimize").removeClass("disabled");
 
     $('#output').val($('#output').val() + err);
 
@@ -251,11 +254,9 @@ UIPaused.prototype.stop = function () {
 }
 
 ////////////
-function Interpreter(program, input, mem_size, onTick, onFinish) {
+function Interpreter(program, input, onTick, onFinish) {
     this.program = program;
     this.input = input;
-    this.mem_size = mem_size;
-    this.output = '';
 
     this.onTick = onTick;
     this.onFinish = onFinish;
@@ -266,15 +267,17 @@ function Interpreter(program, input, mem_size, onTick, onFinish) {
 
     this.memory = {0: 0};
     this.mem_ptr = 0;
+    this.mem_size = 1;    
     this.input_ptr = 0;
     this.pc = 0;
+    this.output = '';
 
     this.state = new Stopped(this);
 
-    this.init(mem_size);
+    this.init();
 }
 
-Interpreter.prototype.init = function(mem_size) {
+Interpreter.prototype.init = function() {
     /* precompute jumps: */
     for(var pc = 0, stack = []; pc < this.program.length; ++pc) {
         var opcode = this.program[pc];
@@ -287,11 +290,6 @@ Interpreter.prototype.init = function(mem_size) {
             this.jumps[pc] = target;
         }
     }
-
-    /* preload memory: */
-    for(var i = 0; i < mem_size; ++i) {
-        this.memory[i] = 0;
-    }    
 }
 
 Interpreter.prototype.runCycle = function(instPerCycle) {
@@ -303,6 +301,10 @@ Interpreter.prototype.runCycle = function(instPerCycle) {
             switch(opcode) {
                 case '>':
                     ++this.mem_ptr;
+                    if(this.mem_ptr == this.mem_size) {
+                        this.memory[this.mem_ptr] = 0;
+                        ++this.mem_size;
+                    } 
                     break;
                 case '<':
                     --this.mem_ptr;
@@ -458,6 +460,6 @@ Paused.prototype.step = function () {
 }
 
 Paused.prototype.stop = function () {
-    this.interpreter.finish();
+    this.interpreter.finish("STOP FORCED");
     return new Stopped(this.interpreter);
 }
