@@ -9,6 +9,7 @@ This project contains several interpreters for the [brainfuck language](http://w
  * [haskell/brainfuck.hs](haskell/brainfuck.hs): Interpreter in Haskell
  * [haskell/bf2c.hs](haskell/bf2c.hs): Translator from brainfuck to C in Haskell
  * [asm/brainfuck.s](asm/brainfuck.s): Interpreter in assembler for x86_64
+ * [javascript/brainfuck.js](javascript/brainfuck.js): Interpreter in Javascript (live version [here](http://pablojorge.github.io/brainfuck))
  
 Is also includes a series of sample programs:
 
@@ -115,7 +116,17 @@ Running the primes generator with the assembler interpreter:
 	Primes up to: 50
 	2 3 5 7 11 13 17 19 23 29 31 37 41 43 47  
 
-## Speed differences between each version
+## Javascript
+
+There's a live version of the Javascript interpreter at [http://pablojorge.github.io/brainfuck](http://pablojorge.github.io/brainfuck)
+
+It features a debugger-like interface, with support for:
+ * Memory inspection
+ * Step-by-step execution
+ * Modification of program AND input between steps
+ * Configurable speed (operations/instructions per cycle, and delay between cycles)
+
+# Benchmarks
 
 A good program to use as benchmark is the Mandelbrot set generator.
 
@@ -226,6 +237,8 @@ $ cd <pypy-source>
 $ python rpython/translator/goal/translate.py ~/Projects/github/brainfuck/python/brainfuck-rpython.py
 ```
 
+## Comparison table
+
 This is the full comparison between all versions:
 
 | | Sierpinski | Mandelbrot | Primes up to 100 | 
@@ -241,6 +254,6 @@ This is the full comparison between all versions:
 | Translated to C (-O0) | 0m0.002s | 0m19.674s | 0m0.243s |
 | Translated to C (-O1) | 0m0.001s | 0m1.360s | 0m0.012s |
 
-Notice that the RPython version of the interpreter is faster than the C version, even when it's compiled with optimizations. Only the original brainfuck programs translated to C and then compiled run faster than the RPython interpreter.
+Notice the impressive difference between CPython and PyPy. In both cases, running the same code is 40 times slower in CPython. This means you can have a really big gain for "free" (almost), by just using the PyPy interpreter. Translating to RPython is not free of course, and the gain is not as big.
 
-Another impressive highlight is the difference in speed for the same code between CPython and PyPy (making the code RPython-compatible requires some changes)
+In the other cases, the performance differences are totally expected (C interpreter compiled with optimisations has an equivalent performance to the assembler interpreter, the translated to C version is almost two orders of magnitude faster than the interpreted version, etc.).
