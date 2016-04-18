@@ -8,13 +8,11 @@ import (
 	"os"
 )
 
-func eval(r io.Reader, i io.Reader, w io.Writer, e io.Writer) {
-	prog, err := ioutil.ReadAll(r) // .bf "file" read into a byte array
+func eval(r io.Reader, i io.Reader, w io.Writer) error {
+	prog, err := ioutil.ReadAll(r)
 	if err != nil {
-		fmt.Fprintf(e, "%v\n", err)
-		os.Exit(1)
+		return err
 	}
-
 	input := bufio.NewReader(i) // buffered reader for `,` requests
 
 	var (
@@ -22,10 +20,11 @@ func eval(r io.Reader, i io.Reader, w io.Writer, e io.Writer) {
 		dpos uint   = 0                  // data position
 		dpth uint   = 1                  // scope depth - for `[` and `]`
 		size uint   = 30000              // size of data card
+		plen uint   = uint(len(prog))    // programme length
 		data []byte = make([]byte, size) // data card with `size` items
 	)
 
-	for fpos < uint(len(prog)) {
+	for fpos < plen {
 		switch prog[fpos] {
 		case '+': // increment at current position
 			data[dpos]++
@@ -82,18 +81,24 @@ func eval(r io.Reader, i io.Reader, w io.Writer, e io.Writer) {
 		}
 		fpos++
 	}
+	return nil
 }
 
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "usage: %s [file.bf]\n", os.Args[0])
-		os.Exit(1)
+		os.Exit(3)
 	}
+
 	r, err := os.Open(os.Args[1])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(2)
+	}
+
+	err = eval(r, os.Stdin, os.Stdout)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-
-	eval(r, os.Stdin, os.Stdout, os.Stderr)
 }
