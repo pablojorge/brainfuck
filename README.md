@@ -10,6 +10,7 @@ This project contains several interpreters for the [brainfuck language](http://w
  * [haskell/bf2c.hs](haskell/bf2c.hs): Translator from brainfuck to C in Haskell
  * [asm/brainfuck.s](asm/brainfuck.s): Interpreter in assembler for x86_64
  * [javascript/brainfuck.js](javascript/brainfuck.js): Interpreter in Javascript (live version [here](http://pablojorge.github.io/brainfuck))
+ * [go/brainfuck.go](go/brainfuck.go): Interpreter in Go
  
 Is also includes a series of sample programs:
 
@@ -125,6 +126,20 @@ It features a debugger-like interface, with support for:
  * Step-by-step execution
  * Modification of program AND input between steps
  * Configurable speed (operations/instructions per cycle, and delay between cycles)
+
+## Golang
+
+Running the number warper with the go interpreter:
+
+    $ cd go
+    $ go build -o brainfuck
+    $ ./brainfuck ../programs/numwarp.bf 
+    32
+      /\
+       / 
+    /\ \/
+     /\
+      /
 
 # Benchmarks
 
