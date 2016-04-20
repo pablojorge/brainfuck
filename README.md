@@ -11,20 +11,25 @@ This project contains several interpreters for the [brainfuck language](http://w
  * [asm/brainfuck.s](asm/brainfuck.s): Interpreter in assembler for x86_64
  * [javascript/brainfuck.js](javascript/brainfuck.js): Interpreter in Javascript (live version [here](http://pablojorge.github.io/brainfuck))
  
-Is also includes a series of sample programs:
+Is also includes a series of sample programs (further contributions welcome):
+ * [hello.bf](programs/hello.bf): Simple hello world! program
+ * [primes.bf](programs/primes.bf): Prime number generator. It prompts a number and generates all the primes from 1 up to that number.
+ * [rot13.bf](programs/rot13.bf): Applies ROT13 to its input
+ * [fibonacci.bf](programs/fibonacci.bf): Fibonacci number generator.
+ * [mandelbrot.bf](programs/mandelbrot.bf): Mandelbrot set generator (taken from [http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b](http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b))
+ * [programs/sierpinski.bf](programs/sierpinski.bf): Sierpinsky Triangle generator (taken from the [Spanish Wikipedia article of Brainfuck](http://es.wikipedia.org/wiki/Brainfuck))
+ * [cat.bf](programs/cat.bf): Emulates the "cat" program. 
+ * [cat2.bf](programs/cat2.bf): An alternative "cat" implementation. 
+ * [tolower.bf](programs/tolower.bf): Prints the lower case equivalent of its input, but it's no so smart since it doesn't check for the original case or whether it's a letter or not.
+ * [666.bf](programs/666.bf): Prints `666`
+ * [random.bf](programs/random.bf): A pseudo random number generator
+ * [wc.bf](programs/wc.bf): Word counter (like the standard Unix utility)
+ * [dbfi.bf](programs/dbfi.bf): A Brainfuck interpreter in Brainfuck
+ * [dbf2c.bf](programs/dbf2c.bf): A Brainfuck to C translator
+ * [numwarp.bf](programs/numwarp.bf): Displays numbers from stdin vertically
+ * [atoi.bf](programs/atoi.bf): Converts strings to integers
+ * [bizzfuzz.bf](programs/bizzfuzz.bf): A Brainfuck implementation of the _Fizzbuzz_ challenge
 
- * [samples/hello.bf](samples/hello.bf): Simple hello world! program
- * [samples/primes.bf](samples/primes.bf): Prime number generator. It prompts a number and generates all the primes from 1 up to that number.
- * [samples/rot13.bf](samples/rot13.bf): Applies ROT13 to its input
- * [samples/fibonacci.bf](samples/fibonacci.bf): Fibonacci number generator.
- * [samples/mandelbrot.bf](samples/mandelbrot.bf): Mandelbrot set generator (taken from [http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b](http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b))
- * [samples/sierpinski.bf](samples/sierpinski.bf): Sierpinsky Triangle generator (taken from the [spanish Wikipedia article of Brainfuck](http://es.wikipedia.org/wiki/Brainfuck))
- 
-And very simple programs I wrote myself:
-
- * [programs/cat.bf](programs/cat.bf): Emulates the "cat" program. It's just "+[,.]"
- * [programs/tolower.bf](programs/tolower.bf): Prints the lower case equivalent of its input, but it's no so smart since it doesn't check for the original case or whether it's a letter or not.
- 
 # System support
 
 All programs were tried in Ubuntu 12.04 and Mac OS X 10.8, except for the Assembler interpreter which only works with the Mac OS X assembler.
@@ -257,3 +262,4 @@ This is the full comparison between all versions:
 Notice the impressive difference between CPython and PyPy. In both cases, running the same code is 40 times slower in CPython. This means you can have a really big gain for "free" (almost), by just using the PyPy interpreter. Translating to RPython is not free of course, and the gain is not as big.
 
 In the other cases, the performance differences are totally expected (C interpreter compiled with optimisations has an equivalent performance to the assembler interpreter, the translated to C version is almost two orders of magnitude faster than the interpreted version, etc.).
+
