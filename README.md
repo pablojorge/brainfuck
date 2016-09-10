@@ -11,6 +11,7 @@ This project contains several interpreters for the [brainfuck language](http://w
  * [asm/brainfuck.s](asm/brainfuck.s): Interpreter in assembler for x86_64
  * [javascript/brainfuck.js](javascript/brainfuck.js): Interpreter in Javascript (live version [here](http://pablojorge.github.io/brainfuck))
  * [go/brainfuck.go](go/brainfuck.go): Interpreter in Go
+ * [lua/brainfuck.lua](lua/brainfuck.lua): Interpreter in Lua
  
 Is also includes a series of sample programs (further contributions welcome):
  * [hello.bf](programs/hello.bf): Simple hello world! program
@@ -145,6 +146,17 @@ Running the number warper with the go interpreter:
     /\ \/
      /\
       /
+
+## Lua
+
+To use the [Lua](http://www.lua.org/) interpreter:
+
+    $ cd lua
+    $ lua brainfuck.lua ../programs/hello.bf
+	Hello World!
+
+This interpreter is compatible with Lua 5.1, 5.2 and 5.3 languages,
+and runs fast with [LuaJIT](http://luajit.org/).
 
 # Benchmarks
 
