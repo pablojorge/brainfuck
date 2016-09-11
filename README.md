@@ -19,7 +19,7 @@ Is also includes a series of sample programs (further contributions welcome):
  * [rot13.bf](programs/rot13.bf): Applies ROT13 to its input
  * [fibonacci.bf](programs/fibonacci.bf): Fibonacci number generator.
  * [mandelbrot.bf](programs/mandelbrot.bf): Mandelbrot set generator (taken from [http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b](http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b))
- * [programs/sierpinski.bf](programs/sierpinski.bf): Sierpinsky Triangle generator (taken from the [Spanish Wikipedia article of Brainfuck](http://es.wikipedia.org/wiki/Brainfuck))
+ * [sierpinski.bf](programs/sierpinski.bf): Sierpinsky Triangle generator (taken from the [Spanish Wikipedia article of Brainfuck](http://es.wikipedia.org/wiki/Brainfuck))
  * [cat.bf](programs/cat.bf): Emulates the "cat" program. 
  * [cat2.bf](programs/cat2.bf): An alternative "cat" implementation. 
  * [tolower.bf](programs/tolower.bf): Prints the lower case equivalent of its input, but it's no so smart since it doesn't check for the original case or whether it's a letter or not.
@@ -55,7 +55,7 @@ Running the Sierpinsky Triangle generator:
     $ cd c
     $ make brainfuck
     cc brainfuck.c -o brainfuck
-    $ ./brainfuck ../samples/sierpinski.bf 
+    $ ./brainfuck ../programs/sierpinski.bf
                                     *    
                                    * *    
                                   *   *    
@@ -94,7 +94,7 @@ Running the Sierpinsky Triangle generator:
 To use the haskell interpreter:
 
     $ cd haskell
-    $ runhaskell brainfuck.hs ../samples/hello.bf 
+    $ runhaskell brainfuck.hs ../programs/hello.bf
 	Hello World!
 
 ## Brainfuck to C translator
@@ -102,8 +102,8 @@ To use the haskell interpreter:
 Running the same program, but the version translated to C:
 
     $ cd haskell
-    $ make ../samples/sierpinski.c
-	runhaskell bf2c.hs < ../samples/sierpinski.bf | indent > sierpinski.c
+    $ make ../programs/sierpinski.c
+	runhaskell bf2c.hs < ../programs/sierpinski.bf | indent > sierpinski.c
     $ make sierpinski
 	cc sierpinski.c -o sierpinski
     $ ./sierpinski
@@ -119,7 +119,7 @@ Running the primes generator with the assembler interpreter:
 	ld -e _main -arch x86_64 -lc brainfuck.o -o brainfuck 
 	ld: warning: -macosx_version_min not specified, assuming 10.6
 	rm brainfuck.o
-	$ ./brainfuck ../samples/primes.bf 
+	$ ./brainfuck ../programs/primes.bf
 	Primes up to: 50
 	2 3 5 7 11 13 17 19 23 29 31 37 41 43 47  
 
@@ -139,7 +139,7 @@ Running the number warper with the go interpreter:
 
     $ cd go
     $ go build -o brainfuck
-    $ ./brainfuck ../programs/numwarp.bf 
+    $ ./brainfuck ../programs/numwarp.bf
     32
       /\
        / 
@@ -164,7 +164,7 @@ A good program to use as benchmark is the Mandelbrot set generator.
 
 First, with the python interpreter:
 
-    $ time python brainfuck.py ../samples/mandelbrot.bf
+    $ time python brainfuck.py ../programs/mandelbrot.bf
     AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDEGFFEEEEDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
     AAAAAAAAAAAAAAABBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDEEEFGIIGFFEEEDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBB
     AAAAAAAAAAAAABBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDEEEEFFFI KHGGGHGEDDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBB
@@ -222,7 +222,7 @@ It took 992 minutes (16hs 32 min). Not very fast...
 
 Now with the C interpreter:
 
-    $ time ./brainfuck ../samples/mandelbrot.bf
+    $ time ./brainfuck ../programs/mandelbrot.bf
     [...]
     real    1m50.316s
     user    1m50.251s
@@ -232,7 +232,7 @@ Now with the C interpreter:
 
 3rd try: the translated to C version without optimizations:
 
-    $ runhaskell bf2c.hs < ../samples/mandelbrot.bf > mandelbrot.c
+    $ runhaskell bf2c.hs < ../programs/mandelbrot.bf > mandelbrot.c
     $ cc mandelbrot.c -o mandelbrot
     $ time ./mandelbrot
     [...]
