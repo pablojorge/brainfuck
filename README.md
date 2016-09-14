@@ -158,6 +158,14 @@ To use the [Lua](http://www.lua.org/) interpreter:
 This interpreter is compatible with Lua 5.1, 5.2 and 5.3 languages,
 and runs fast with [LuaJIT](http://luajit.org/).
 
+## Brainfuck to Lua translator
+
+Running the same program, but the version translated to Lua:
+
+    $ cd lua
+    $ lua bf2lua.lua ../programs/hello.bf | lua -
+	Hello World!
+
 # Benchmarks
 
 A good program to use as benchmark is the Mandelbrot set generator.

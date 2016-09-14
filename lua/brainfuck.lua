@@ -44,9 +44,8 @@ while pc <= len do
         buffer[ptr] = buffer[ptr] - 1
     elseif opcode == '.' then
         io.stdout:write(string.char(buffer[ptr]))
-        io.stdout:flush()
     elseif opcode == ',' then
-        buffer[ptr] = string.byte(io.stdin:read(1)) or os.exit(0)
+        buffer[ptr] = string.byte(io.stdin:read(1) or '\0')
     elseif opcode == '[' then
         if buffer[ptr] == 0 then
             pc = jump[pc]
