@@ -8,6 +8,7 @@ f:close()
 print[[
 #!/usr/bin/env lua
 
+io.stdout:setvbuf'no'
 local buffer = setmetatable({}, {
     __index = function ()
         return 0    -- default value
@@ -16,6 +17,7 @@ local buffer = setmetatable({}, {
 local ptr = 1
 -- end of prologue
 ]]
+
 print((string.gsub(src, '.', {
     ['+'] = [[
 buffer[ptr] = buffer[ptr] + 1

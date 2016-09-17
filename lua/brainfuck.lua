@@ -5,6 +5,7 @@ local f = arg[1] and assert(io.open(arg[1], 'r')) or io.stdin
 local src = string.gsub(f:read'*a', '[^><+%-%.,%[%]]', '')
 local len = string.len(src)
 f:close()
+io.stdout:setvbuf'no'
 
 local stack = {}
 local jump = {}
