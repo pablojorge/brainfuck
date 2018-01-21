@@ -136,6 +136,8 @@ It features a debugger-like interface, with support for:
 
 ## Golang
 
+(contributed by [Philip K.](https://github.com/phikal))
+
 Running the number warper with the go interpreter:
 
     $ cd go
@@ -149,6 +151,8 @@ Running the number warper with the go interpreter:
       /
 
 ## Lua
+
+(contributed by [François Perrad](https://github.com/fperrad))
 
 To use the [Lua](http://www.lua.org/) interpreter:
 
@@ -315,4 +319,4 @@ Notice the impressive difference between CPython and PyPy. In both cases, runnin
 
 Adapting the source to RPython is not free of course, and the gain is not as big, BUT if we explictly add support for the JIT, the gain makes it totally worthy. In fact the gain of this version compared with running the simplified version (unmodified) with PyPy, is comparable to the gain obtained by running the unmodified version with PyPy vs running it with CPython.
 
-In the other cases, the performance differences are totally expected (C interpreter compiled with optimisations has an equivalent performance to the assembler interpreter, the translated to C version is almost two orders of magnitude faster than the interpreted version, etc.). It's also worth mentioning that the JIT-enabled Python version runs _faster_ than the translated-to-C version (compiled without optimizations).
+In the other cases, the performance differences are totally expected (C interpreter compiled with optimisations has an equivalent performance to the assembler interpreter, the translated to C version is almost two orders of magnitude faster than the interpreted version, etc.). It's also worth highliting the fact that the JIT-enabled Python version runs _faster_ than the translated-to-C version (compiled without optimizations).
