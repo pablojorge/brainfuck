@@ -5,6 +5,7 @@ This project contains several interpreters for the [brainfuck language](http://w
  * [python/brainfuck.py](python/brainfuck.py): Interpreter in Python
  * [python/brainfuck-simple.py](python/brainfuck-simple.py): Faster version of the Python interpreter
  * [python/brainfuck-rpython.py](python/brainfuck-rpython.py): RPython-compatible version of the Python interpreter
+ * [python/brainfuck-rpython-jit.py](python/brainfuck-rpython-jit.py): JIT-enabled version of the Python interpreter
  * [c/brainfuck.c](c/brainfuck.c): Interpreter in C
  * [haskell/brainfuck.hs](haskell/brainfuck.hs): Interpreter in Haskell
  * [haskell/bf2c.hs](haskell/bf2c.hs): Translator from brainfuck to C in Haskell
@@ -270,12 +271,27 @@ The original Python interpreter is excessively complex, but it can be easily imp
  * Avoiding looping over non-operands
  * Avoiding array lookups
 
-There's a separate version, brainfuck-simple.py that contains those improvements. Another version, brainfuck-rpython.py, is the same thing but slightly modified so it can be translated using RPython. The RPython version was generated using: 
+There's a separate version, brainfuck-simple.py that contains those improvements. Another version, brainfuck-rpython.py, is the same thing but slightly modified so it can be translated using RPython:
 
-```
-$ cd <pypy-source>
-$ python rpython/translator/goal/translate.py ~/Projects/github/brainfuck/python/brainfuck-rpython.py
-```
+    $ cd <pypy-source>
+    $ python rpython/translator/goal/translate.py ~/Projects/github/brainfuck/python/brainfuck-rpython.py
+
+Running time:
+
+    $ time ./brainfuck-rpython-c ~/Projects/github/brainfuck/programs/mandelbrot.bf
+    [...]
+    real  0m29.978s
+    user  0m29.796s
+    sys  0m0.110s
+
+This can be optimized even further. As suggested by [Gsam](https://github.com/GSam), and taking hints from [this post](https://morepypy.blogspot.com.ar/2011/04/tutorial-part-2-adding-jit.html), if we explicitly add support for PyPy's JIT, the gain is really big:
+
+    $ python rpython/translator/goal/translate.py --opt=jit ~/Projects/github/brainfuck/python/brainfuck-rpython-jit.py
+    $ time ./brainfuck-rpython-jit-c ~/Projects/github/brainfuck/programs/mandelbrot.bf
+    [...]
+    real  0m4.943s
+    user  0m4.867s
+    sys  0m0.043s
 
 ## Comparison table
 
@@ -285,16 +301,18 @@ This is the full comparison between all versions:
 | ---: | :---: | :---: | :---: |
 | Non-optimized python version (CPython) | 0m5.387s | 991m45.631s | 19m34.163s |
 | Non-optimized python version (PyPy) | 0m0.470s | 24m59.928s | 0m28.210s |
-| Optimized python version (CPython) | 0m0.125s | 67m39.287s | 1m16.431s |
-| Optimized python version (PyPy) | 0m0.246s | 1m35.345s | 0m2.144s |
+| Simplified python version (CPython) | 0m0.125s | 67m39.287s | 1m16.431s |
+| Simplified python version (PyPy) | 0m0.246s | 1m35.345s | 0m2.144s |
 | Improved python version (RPython) | 0m0.003s | 0m29.796s | 0m0.486s |
+| JIT-enabled version (RPython-JIT) | 0m0.008s | 0m4.867s | 0m0.107s |
 | Assembler | 0m0.015s | 1m7.288s | 0m1.501s |
 | C Interpreter (-O0) | 0m0.014s | 2m7.036s | 0m2.012s |
 | C Interpreter (-O1) | 0m0.009s | 1m7.504s | 0m1.005s |
 | Translated to C (-O0) | 0m0.002s | 0m19.674s | 0m0.243s |
 | Translated to C (-O1) | 0m0.001s | 0m1.360s | 0m0.012s |
 
-Notice the impressive difference between CPython and PyPy. In both cases, running the same code is 40 times slower in CPython. This means you can have a really big gain for "free" (almost), by just using the PyPy interpreter. Translating to RPython is not free of course, and the gain is not as big.
+Notice the impressive difference between CPython and PyPy. In both cases, running the same code is 40 times slower in CPython. This means you can have a really big gain for "free" (almost), by just using the PyPy interpreter.
 
-In the other cases, the performance differences are totally expected (C interpreter compiled with optimisations has an equivalent performance to the assembler interpreter, the translated to C version is almost two orders of magnitude faster than the interpreted version, etc.).
+Adapting the source to RPython is not free of course, and the gain is not as big, BUT if we explictly add support for the JIT, the gain makes it totally worthy. In fact the gain of this version compared with running the simplified version (unmodified) with PyPy, is comparable to the gain obtained by running the unmodified version with PyPy vs running it with CPython.
 
+In the other cases, the performance differences are totally expected (C interpreter compiled with optimisations has an equivalent performance to the assembler interpreter, the translated to C version is almost two orders of magnitude faster than the interpreted version, etc.). It's also worth mentioning that the JIT-enabled Python version runs _faster_ than the translated-to-C version (compiled without optimizations).
