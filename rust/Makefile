@@ -2,6 +2,9 @@ ALL = brainfuck
 
 all: $(ALL)
 
+test: tests
+	./$<
+
 %: %.rs
 	rustc $<
 

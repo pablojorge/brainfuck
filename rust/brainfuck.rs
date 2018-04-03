@@ -1,3 +1,4 @@
+use std;
 use std::io;
 use std::env;
 use std::fs::File;
@@ -27,12 +28,12 @@ macro_rules! bf_loop {
 }
 
 #[derive(Debug)]
-enum InvalidProgramError {
+pub enum InvalidProgramError {
     ExcessiveOpeningBrackets(usize),
     UnexpectedClosingBracket(usize),
 }
 
-fn bf_jumps(program: &[u8]) -> Result<HashMap<usize, usize>,
+pub fn bf_jumps(program: &[u8]) -> Result<HashMap<usize, usize>,
                                       InvalidProgramError> {
     let mut stack: Vec<usize> = Vec::new();
     let mut jumps = HashMap::new();
