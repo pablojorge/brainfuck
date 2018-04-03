@@ -24,5 +24,5 @@ fn main() {
     let program = read_file(&args[1]).expect("Error reading file");
     let program = program.as_bytes();
 
-    brainfuck::bf_eval(program).expect("Error running program");
+    brainfuck::bf_eval(program, 30000).expect("Error running program");
 }

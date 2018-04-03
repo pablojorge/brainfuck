@@ -23,7 +23,7 @@ pub enum InvalidProgramError {
 }
 
 pub fn bf_jumps(program: &[u8]) -> Result<HashMap<usize, usize>,
-                                      InvalidProgramError> {
+                                          InvalidProgramError> {
     let mut stack: Vec<usize> = Vec::new();
     let mut jumps = HashMap::new();
 
@@ -85,10 +85,15 @@ impl std::convert::From<InvalidProgramError> for BFEvalError {
     }
 }
 
-pub fn bf_eval(program: &[u8]) -> Result<(), BFEvalError> {
-    let mut mem: [u8; 30000] = [0; 30000];
+pub fn bf_eval(program: &[u8], mem_size: usize) -> Result<Vec<u8>,
+                                                          BFEvalError> {
+    let mut mem: Vec<u8> = Vec::with_capacity(mem_size);
     let mut ptr: usize = 0;
     let jumps = bf_jumps(program)?;
+
+    for _ in 0..mem_size {
+        mem.push(0)
+    };
 
     bf_loop!(opcode, pc, program,
         match opcode {
@@ -104,5 +109,5 @@ pub fn bf_eval(program: &[u8]) -> Result<(), BFEvalError> {
         }
     );
 
-    Ok(())
+    Ok(mem)
 }

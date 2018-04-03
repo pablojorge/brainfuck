@@ -34,4 +34,19 @@ fn main() {
 
     assert_fails!(brainfuck::bf_jumps("-=[[[[]]]".as_bytes()),
                   brainfuck::InvalidProgramError::ExcessiveOpeningBrackets(2));
+
+    assert_eq!(
+        brainfuck::bf_eval("+++>+++>+++".as_bytes(), 3).unwrap(),
+        vec![3, 3, 3]
+    );
+
+    assert_eq!(
+        brainfuck::bf_eval("+++>+++>+++--<-".as_bytes(), 3).unwrap(),
+        vec![3, 2, 1]
+    );
+
+    assert_fails!(brainfuck::bf_eval("-=[[[[]]]".as_bytes(), 5),
+                  brainfuck::BFEvalError::InvalidProgramError(
+                      brainfuck::InvalidProgramError::ExcessiveOpeningBrackets(2)
+                  ));
 }
