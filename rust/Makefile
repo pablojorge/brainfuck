@@ -1,4 +1,4 @@
-ALL = brainfuck
+ALL = main
 
 all: $(ALL)
 
@@ -9,4 +9,4 @@ test: tests
 	rustc $<
 
 clean:
-	rm -rf $(ALL) *.o
+	rm -rf $(ALL) tests
