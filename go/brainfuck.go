@@ -6,7 +6,46 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"errors"
+
+	"stack"
 )
+
+func bf_jumps(prog []byte) (map[uint]uint, error) {
+	var (
+		stack *stack.Stack = stack.New()
+		jumps map[uint]uint = make(map[uint]uint)
+
+		plen uint = uint(len(prog))
+		fpos uint = 0
+	)
+
+	for fpos < plen {
+		switch prog[fpos] {
+		case '[':
+			stack.Push(fpos)
+		case ']':
+			tget, err := stack.Pop()
+			if err != nil {
+				return nil, errors.New(
+					"unexpected closing bracket",
+				)
+			}
+			jumps[tget] = fpos
+			jumps[fpos] = tget
+		}
+		fpos++
+	}
+
+	_, err := stack.Pop()
+	if err == nil {
+		return nil, errors.New(
+			"excessive opening brackets",
+		)
+	}
+
+	return jumps, nil
+}
 
 func eval(r io.Reader, i io.Reader, w io.Writer) error {
 	prog, err := ioutil.ReadAll(r)
@@ -18,11 +57,16 @@ func eval(r io.Reader, i io.Reader, w io.Writer) error {
 	var (
 		fpos uint   = 0                  // file position
 		dpos uint   = 0                  // data position
-		dpth uint   = 1                  // scope depth - for `[` and `]`
 		size uint   = 30000              // size of data card
 		plen uint   = uint(len(prog))    // programme length
 		data []byte = make([]byte, size) // data card with `size` items
 	)
+
+	jumps, err := bf_jumps(prog)  // pre-computed jumps
+
+	if err != nil {
+		return err
+	}
 
 	for fpos < plen {
 		switch prog[fpos] {
@@ -50,34 +94,12 @@ func eval(r io.Reader, i io.Reader, w io.Writer) error {
 			}
 		case '[': // if current position is false, skip to ]
 			if data[dpos] == 0 {
-				for { // skip forward until as same scope depth
-					fpos++
-					if prog[fpos] == '[' {
-						dpth++
-					} else if prog[fpos] == ']' {
-						dpth--
-					}
-					if dpth == 0 {
-						break
-					}
-				}
-				dpth = 1 // reset scope depth
+				fpos = jumps[fpos]
 			}
 		case ']': // if at current position true, return to [
 			if data[dpos] != 0 {
-				for { // move back until at same scope depth
-					fpos--
-					if prog[fpos] == ']' {
-						dpth++
-					} else if prog[fpos] == '[' {
-						dpth--
-					}
-					if dpth == 0 {
-						break
-					}
-				}
+				fpos = jumps[fpos]
 			}
-			dpth = 1 // reset scope depth
 		}
 		fpos++
 	}
