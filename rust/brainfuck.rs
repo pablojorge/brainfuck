@@ -74,42 +74,82 @@ impl std::convert::From<InvalidProgramError> for BFEvalError {
 }
 
 type MemElem = u32;
+type Memory = Vec<MemElem>;
 
-fn read_mem() -> Result<MemElem, BFEvalError> {
+pub struct BFState {
+    mem: Memory,
+    ptr: usize,
+}
+
+impl BFState {
+    pub fn new(mem_size: usize) -> BFState {
+        let mut state = BFState {
+            mem: Vec::with_capacity(mem_size),
+            ptr: 0 
+        };
+
+        for _ in 0..mem_size {
+            state.mem.push(0)
+        };
+
+        state
+    }
+
+    pub fn fwd(&mut self) {
+        self.ptr += 1;
+    }
+
+    pub fn bwd(&mut self) {
+        self.ptr -= 1;
+    }
+
+    pub fn inc(&mut self) {
+        self.mem[self.ptr] += 1;
+    }
+
+    pub fn dec(&mut self) {
+        self.mem[self.ptr] -= 1;
+    }
+
+    pub fn read(&self) -> MemElem {
+        self.mem[self.ptr]
+    }
+
+    pub fn write(&mut self, val: MemElem) {
+        self.mem[self.ptr] = val;
+    }
+}
+
+pub fn read_mem() -> Result<MemElem, BFEvalError> {
     let mut input: [u8; 1] = [0];
     io::stdin().read(&mut input)?;
     Ok(input[0].into())
 }
 
-fn print_mem(mem: MemElem) -> Result<(), std::io::Error> {
+pub fn print_mem(mem: MemElem) -> Result<(), std::io::Error> {
     let x: u8 = mem.try_into().unwrap();
     print!("{}", x as char);
     io::stdout().flush()
 }
 
-pub fn bf_eval(program: &[u8], mem_size: usize) -> Result<Vec<MemElem>,
+pub fn bf_eval(program: &[u8], mem_size: usize) -> Result<(),
                                                           BFEvalError> {
-    let mut mem: Vec<MemElem> = Vec::with_capacity(mem_size);
-    let mut ptr: usize = 0;
+    let mut state = BFState::new(mem_size);
     let jumps = bf_jumps(program)?;
-
-    for _ in 0..mem_size {
-        mem.push(0)
-    };
 
     bf_loop!(opcode, pc, program,
         match opcode {
-            '>' => ptr+=1,
-            '<' => ptr-=1,
-            '+' => mem[ptr]+=1,
-            '-' => mem[ptr]-=1,
-            '.' => print_mem(mem[ptr])?,
-            ',' => mem[ptr]=read_mem()?,
-            '[' => if mem[ptr] == 0 {pc = jumps[&pc]},
-            ']' => if mem[ptr] != 0 {pc = jumps[&pc]},
+            '>' => state.fwd(),
+            '<' => state.bwd(),
+            '+' => state.inc(),
+            '-' => state.dec(),
+            '.' => print_mem(state.read())?,
+            ',' => state.write(read_mem()?),
+            '[' => if state.read() == 0 {pc = jumps[&pc]},
+            ']' => if state.read() != 0 {pc = jumps[&pc]},
             _ => (),
         }
     );
 
-    Ok(mem)
+    Ok(())
 }

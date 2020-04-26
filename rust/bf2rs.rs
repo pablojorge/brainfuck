@@ -13,47 +13,23 @@ struct RustTarget;
 impl Target for RustTarget {
     fn preamble() -> String {
         String::from(r#"
-            use std::io;
-            use std::io::prelude::*;
-            use std::convert::TryInto;
-
-            macro_rules! print_mem {
-                ($mem:expr, $ptr:expr) => ({
-                    let aux: u8 = $mem[$ptr].try_into().unwrap();
-                    print!("{}", aux as char);
-                    io::stdout().flush()?;
-                })
-            }
-
-            #[allow(unused_macros)]
-            macro_rules! read_mem {
-                ($mem:expr, $ptr:expr) => ({
-                    let mut aux: [u8; 1] = [0];
-                    io::stdin().read(&mut aux)?;
-                    $mem[$ptr] = aux[0].into();
-                })
-            }
+            mod brainfuck;
 
             fn main() -> Result<(), std::io::Error> {
-                let mut mem: Vec<u32> = Vec::with_capacity(30000);
-                let mut ptr: usize = 0;
-
-                for _ in 0..30000 {
-                    mem.push(0)
-                };
+                let mut state = brainfuck::BFState::new(30000);
         "#)
     }
 
     fn translate(opcode: char) -> String {
         String::from(
             match opcode {
-                '>' => "ptr+=1;",
-                '<' => "ptr-=1;",
-                '+' => "mem[ptr]+=1;",
-                '-' => "mem[ptr]-=1;",
-                '.' => "print_mem!(mem, ptr);",
-                ',' => "read_mem!(mem, ptr);",
-                '[' => "while mem[ptr] > 0 {",
+                '>' => "state.fwd();",
+                '<' => "state.bwd();",
+                '+' => "state.inc();",
+                '-' => "state.dec();",
+                '.' => "brainfuck::print_mem(state.read())?;",
+                ',' => "state.write(brainfuck::read_mem()?);",
+                '[' => "while state.read() > 0 {",
                 ']' => "}",
                 _ => "",
             }
