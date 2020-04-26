@@ -13,10 +13,10 @@ struct RustTarget;
 impl Target for RustTarget {
     fn preamble() -> String {
         String::from(r#"
-            mod brainfuck;
+            mod bf;
 
             fn main() -> Result<(), std::io::Error> {
-                let mut state = brainfuck::BFState::new(30000);
+                let mut state = bf::BFState::new(30000);
         "#)
     }
 
@@ -27,8 +27,8 @@ impl Target for RustTarget {
                 '<' => "state.bwd();",
                 '+' => "state.inc();",
                 '-' => "state.dec();",
-                '.' => "brainfuck::print_mem(state.read())?;",
-                ',' => "state.write(brainfuck::read_mem()?);",
+                '.' => "bf::print_mem(state.read())?;",
+                ',' => "state.write(bf::read_mem()?);",
                 '[' => "while state.read() > 0 {",
                 ']' => "}",
                 _ => "",

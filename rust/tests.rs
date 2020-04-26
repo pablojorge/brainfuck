@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-mod brainfuck;
+mod bf;
 
 macro_rules! map {
     ($( $x:expr ),*) => {{
@@ -25,28 +25,28 @@ macro_rules! assert_fails {
 
 fn main() {
     assert_eq!(
-        brainfuck::bf_jumps("[[]]".as_bytes()).unwrap(),
+        bf::bf_jumps("[[]]".as_bytes()).unwrap(),
         map![(0,3), (1,2), (2,1), (3,0)]
     );
 
-    assert_fails!(brainfuck::bf_jumps("[[]]]".as_bytes()),
-                  brainfuck::InvalidProgramError::UnexpectedClosingBracket(4));
+    assert_fails!(bf::bf_jumps("[[]]]".as_bytes()),
+                  bf::InvalidProgramError::UnexpectedClosingBracket(4));
 
-    assert_fails!(brainfuck::bf_jumps("-=[[[[]]]".as_bytes()),
-                  brainfuck::InvalidProgramError::ExcessiveOpeningBrackets(2));
+    assert_fails!(bf::bf_jumps("-=[[[[]]]".as_bytes()),
+                  bf::InvalidProgramError::ExcessiveOpeningBrackets(2));
 
     assert_eq!(
-        brainfuck::bf_eval("+++>+++>+++".as_bytes(), 3).unwrap(),
+        bf::bf_eval("+++>+++>+++".as_bytes(), 3).unwrap(),
         vec![3, 3, 3]
     );
 
     assert_eq!(
-        brainfuck::bf_eval("+++>+++>+++--<-".as_bytes(), 3).unwrap(),
+        bf::bf_eval("+++>+++>+++--<-".as_bytes(), 3).unwrap(),
         vec![3, 2, 1]
     );
 
-    assert_fails!(brainfuck::bf_eval("-=[[[[]]]".as_bytes(), 5),
-                  brainfuck::BFEvalError::InvalidProgramError(
-                      brainfuck::InvalidProgramError::ExcessiveOpeningBrackets(2)
+    assert_fails!(bf::bf_eval("-=[[[[]]]".as_bytes(), 5),
+                  bf::BFEvalError::InvalidProgramError(
+                      bf::InvalidProgramError::ExcessiveOpeningBrackets(2)
                   ));
 }
