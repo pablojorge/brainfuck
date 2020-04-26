@@ -2,6 +2,7 @@ use std;
 use std::io;
 use std::io::prelude::*;
 use std::collections::HashMap;
+use std::convert::TryInto;
 
 macro_rules! bf_loop {
     ($op_name:ident, $pc_name:ident, $program:expr, $body:expr) => ({
@@ -54,19 +55,6 @@ pub fn bf_jumps(program: &[u8]) -> Result<HashMap<usize, usize>,
     }
 }
 
-macro_rules! print_mem {
-    ($mem:expr, $ptr:expr) => ({
-        print!("{}", $mem[$ptr] as char);
-        io::stdout().flush()?
-    })
-}
-
-macro_rules! read_mem {
-    ($mem:expr, $ptr:expr) => ({
-        io::stdin().read(&mut $mem[$ptr..$ptr+1])?;
-    })
-}
-
 #[derive(Debug)]
 pub enum BFEvalError {
     InvalidProgramError(InvalidProgramError),
@@ -85,9 +73,23 @@ impl std::convert::From<InvalidProgramError> for BFEvalError {
     }
 }
 
-pub fn bf_eval(program: &[u8], mem_size: usize) -> Result<Vec<u8>,
+type MemElem = u32;
+
+fn read_mem() -> Result<MemElem, BFEvalError> {
+    let mut input: [u8; 1] = [0];
+    io::stdin().read(&mut input)?;
+    Ok(input[0].into())
+}
+
+fn print_mem(mem: MemElem) -> Result<(), std::io::Error> {
+    let x: u8 = mem.try_into().unwrap();
+    print!("{}", x as char);
+    io::stdout().flush()
+}
+
+pub fn bf_eval(program: &[u8], mem_size: usize) -> Result<Vec<MemElem>,
                                                           BFEvalError> {
-    let mut mem: Vec<u8> = Vec::with_capacity(mem_size);
+    let mut mem: Vec<MemElem> = Vec::with_capacity(mem_size);
     let mut ptr: usize = 0;
     let jumps = bf_jumps(program)?;
 
@@ -101,8 +103,8 @@ pub fn bf_eval(program: &[u8], mem_size: usize) -> Result<Vec<u8>,
             '<' => ptr-=1,
             '+' => mem[ptr]+=1,
             '-' => mem[ptr]-=1,
-            '.' => print_mem!(mem, ptr),
-            ',' => read_mem!(mem, ptr),
+            '.' => print_mem(mem[ptr])?,
+            ',' => mem[ptr]=read_mem()?,
             '[' => if mem[ptr] == 0 {pc = jumps[&pc]},
             ']' => if mem[ptr] != 0 {pc = jumps[&pc]},
             _ => (),
