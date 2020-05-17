@@ -1,24 +1,25 @@
-ALL = brainfuck translate
+ALL = translate
 
 all: $(ALL)
 
 test: tests
 	./$<
 
-brainfuck: brainfuck.rs bf.rs
-translate: translate.rs
+brainfuck: src/main.rs src/bf.rs
+translate: src/translate.rs
+tests: src/tests.rs
 
-%: %.rs
+%: src/%.rs
 	rustc -O $<
 
-%: %.c
+%: src/%.c
 	$(CC) $< -o $@
 
 clean:
 	rm -rf $(ALL) tests
 
 %.rs: %.bf
-	./translate < $< | rustfmt > $(notdir $@)
+	./translate < $< | rustfmt > src/$(notdir $@)
 
 %.c: %.bf
-	./translate c < $< | indent > $(notdir $@)
+	./translate c < $< | indent > src/$(notdir $@)

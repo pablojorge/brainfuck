@@ -1,9 +1,11 @@
+set -x
+
 SOURCE=${1//.bf/.${2}}
 TARGET=`basename ${1//.bf/}`
 
-make translate
-make $SOURCE
-make $TARGET
+time make translate
+time make $SOURCE
+time make $TARGET
 time ./$TARGET
 
-rm $TARGET `basename $SOURCE`
+rm $TARGET src/`basename $SOURCE`
