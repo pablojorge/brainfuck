@@ -1,0 +1,63 @@
+<html>
+  <head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
+    <meta charset="utf-8">
+    <title>WASM Brainfuck</title>
+  </head>
+<style>
+  body {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+</style>
+  </head>
+  <body>
+    <pre id="brainfuck-canvas"></pre>
+
+    <script type="module">
+      import init, { Interpreter } from './pkg/wasm_brainfuck.js';
+
+      var _666 = `>+++++++++[<++++++>-]<... >++++++++++.`;
+      var fibo = `>++++++++++>+>+[
+          [+++++[>++++++++<-]>.<++++++[>--------<-]+<<<]>.>>[
+              [-]<[>+<-]>>[<<+>+>-]<[>+<-[>+<-[>+<-[>+<-[>+<-[>+<-
+                  [>+<-[>+<-[>+<-[>[-]>+>+<<<-[>+<-]]]]]]]]]]]+>>>
+          ]<<<
+      ]
+      `;
+      var cat = "+[,.]"
+      var program = cat;
+      var input = cat;
+
+      async function run() {
+        await init();
+
+        const canvas = document.getElementById("brainfuck-canvas");
+
+        const intepreter = Interpreter.new(program, input, 300000);
+        var start = new Date();
+
+        const renderLoop = () => {
+          var finished = intepreter.tick();
+
+          canvas.textContent = intepreter.render();
+
+          if (!finished) {
+            requestAnimationFrame(renderLoop);
+          } else {
+              console.log("Finished in", (((new Date()) - start) / 1000), "seconds");
+          }
+        };
+
+        console.log("Starting...");
+        requestAnimationFrame(renderLoop);
+
+      }
+
+      run();
+    </script>
+  </body>
+</html>
