@@ -57,6 +57,13 @@
             <input type="number" class="form-control" 
                    value="0" min="0" id="cycle-delay"
                    style="width: 80px;">
+            <div class="form-group">
+              <small>Engine:</small>
+              <select id="select-engine" class="form-control">
+                <option value="js">JS</option>
+                <option value="wasm">WASM</option>
+              </select>
+            </div>
             <button class="btn btn-success" id="btn-start">
               <span class="glyphicon glyphicon-play"></span>
               <span id="btn-start-label">Start</span>
@@ -170,7 +177,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 
-    <script src="brainfuck.js"></script>
+    <script type="module" src="brainfuck.js"></script>
 
   </body>
 </html>
