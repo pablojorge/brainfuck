@@ -85,6 +85,24 @@ function renderMemory(memory, current, size) {
     return ret;
 }
 
+function abbreviateNumber(number) {
+    var levels = [
+        {value: 1000000, suffix: "M"},
+        {value: 1000,    suffix: "K"},
+    ];
+
+    for (var i in levels) {
+        if(number > levels[i].value) {
+            return (
+                (number/levels[i].value).toFixed(2) +
+                levels[i].suffix
+            );
+        }
+    }
+
+    return number.toFixed(2);
+}
+
 function InterpreterUI() {
     this.interpreter = undefined;
     this.state = new UIStopped();
@@ -163,6 +181,15 @@ InterpreterUI.prototype.onTick = function () {
     );
     $('#cycles-count').html(this.interpreter.cycles);
     $('#running-time').html(delta.toFixed(2) + " seconds");
+
+    var instPerCycle = parseInt($('#inst-per-cycle').val()),
+        cyclesPerSec = abbreviateNumber(this.interpreter.cycles/delta),
+        instPerSec = abbreviateNumber((this.interpreter.cycles*instPerCycle)/delta);
+
+    $('#speed').html(
+        cyclesPerSec + " cycles/sec (" +
+        instPerSec + " inst/sec)"
+    );
 }
 
 InterpreterUI.prototype.onFinish = function (result) {
@@ -314,7 +341,6 @@ WASMInterpreterProxy.prototype.runCycle = function(instPerCycle) {
     this.mem_ptr = 0;
     this.mem_size = 1;    
     this.input_ptr = 0;
-    // this.pc = this.wasm_intepreter.pc();
 
     this.onTick(this);
 
