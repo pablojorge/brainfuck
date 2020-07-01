@@ -202,14 +202,14 @@ impl Interpreter {
     }
 
     pub fn render(&self) -> String {
-        self.to_string()
+        self.output.to_string()
     }
 }
 
-impl fmt::Display for Interpreter {
+impl fmt::Display for Buffer<u8> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for i in 0..self.output.ptr {
-            write!(f, "{}", self.output.buf[i] as char)?
+        for i in 0..self.ptr {
+            write!(f, "{}", self.buf[i] as char)?
         };
 
         Ok(())
