@@ -1,11 +1,9 @@
 set -x
 
-SOURCE=${1//.bf/.${2}}
-TARGET=`basename ${1//.bf/}`
+SOURCE=src/`basename ${1//.bf/.${2:-rs}}`
+TARGET=src/`basename ${1//.bf/}`
 
-time make translate
-time make $SOURCE
+cargo run --bin translate ${2:-rs} < $1 > $SOURCE
 time make $TARGET
 time ./$TARGET
-
-rm $TARGET src/`basename $SOURCE`
+rm $SOURCE $TARGET

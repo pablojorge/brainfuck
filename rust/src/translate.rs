@@ -1,84 +1,76 @@
 use std::io::{self, prelude::*};
 use std::env;
 
+mod bf;
+
 trait Target {
-    fn preamble() -> &'static str;
-    fn translate(opcode: char) -> &'static str;
-    fn epilogue() -> &'static str;
+    fn translate(token: &bf::Token) -> &'static str;
 }
 
 struct RustTarget;
 
 impl Target for RustTarget {
-    fn preamble() -> &'static str {r#"
-        mod bf;
+    fn translate(token: &bf::Token) -> &'static str {
+        match token {
+            bf::Token::ProgramStart   => r#"
+                mod bf;
 
-        fn main() -> Result<(), std::io::Error> {
-            let mut state = bf::BFState::new(30000);
-    "#}
-
-    fn translate(opcode: char) -> &'static str {
-        match opcode {
-            '>' => "state.fwd();",
-            '<' => "state.bwd();",
-            '+' => "state.inc();",
-            '-' => "state.dec();",
-            '.' => "bf::print_mem(state.read())?;",
-            ',' => "state.write(bf::read_mem()?);",
-            '[' => "while state.read() > 0 {",
-            ']' => "}",
-            _ => "",
+                fn main() -> Result<(), std::io::Error> {
+                    let mut state = bf::BFState::new(30000);
+            "#,
+            bf::Token::MoveForward(_) => "state.fwd();",
+            bf::Token::MoveBack(_)    => "state.bwd();",
+            bf::Token::IncValue(_)    => "state.inc();",
+            bf::Token::DecValue(_)    => "state.dec();",
+            bf::Token::OutputValue(_) => "bf::print_mem(state.read())?;",
+            bf::Token::InputValue(_)  => "state.write(bf::read_mem()?);",
+            bf::Token::LoopStart(_)   => "while state.read() > 0 {",
+            bf::Token::LoopEnd(pos)   => "}",
+            bf::Token::ProgramEnd     => r#"
+                    Ok(())
+                }
+            "#
         }
     }
-
-    fn epilogue() -> &'static str {r#"
-            Ok(())
-        }
-    "#}
 }
 
 struct CTarget;
 
 impl Target for CTarget {
-    fn preamble() -> &'static str {"
-        #include <stdio.h>
-        #include <stdlib.h>
-        int main() {
-            char mem[30000],
-            *ptr = mem;
-    "}
-
-    fn translate(opcode: char) -> &'static str {
-        match opcode {
-            '>' => "++ptr;",
-            '<' => "--ptr;",
-            '+' => "++(*ptr);",
-            '-' => "--(*ptr);",
-            '.' => "putchar(*ptr);",
-            ',' => "*ptr = getchar();
-                    if (*ptr == EOF) exit(0);",
-            '[' => "while(*ptr) {",
-            ']' => "}",
-            _ => "",
+    fn translate(token: &bf::Token) -> &'static str {
+        match token {
+            bf::Token::ProgramStart   => "
+                #include <stdio.h>
+                #include <stdlib.h>
+                int main() {
+                    char mem[30000],
+                    *ptr = mem;
+            ",
+            bf::Token::MoveForward(_) => "++ptr;",
+            bf::Token::MoveBack(_)    => "--ptr;",
+            bf::Token::IncValue(_)    => "++(*ptr);",
+            bf::Token::DecValue(_)    => "--(*ptr);",
+            bf::Token::OutputValue(_) => "putchar(*ptr);",
+            bf::Token::InputValue(_)  => "
+                *ptr = getchar();
+                if (*ptr == EOF) exit(0);
+            ",
+            bf::Token::LoopStart(_)   =>  "while(*ptr) {",
+            bf::Token::LoopEnd(pos)   => "}",
+            bf::Token::ProgramEnd     => "
+                    return 0;
+                }
+            "
         }
     }
-
-    fn epilogue() -> &'static str {"
-            return 0;
-        }
-    "}
 }
 
-fn translate<T: Target>(bf_input: String) -> String {
+fn translate<T: Target>(tokens: &Vec<bf::Token>) -> String {
     let mut program = String::new();
 
-    program.push_str(&T::preamble());
-
-    for opcode in bf_input.chars() {
-        program.push_str(&T::translate(opcode))
+    for token in tokens {
+        program.push_str(&T::translate(token))
     }
-
-    program.push_str(&T::epilogue());
 
     program
 }
@@ -89,9 +81,11 @@ fn main() {
     let mut bf_input = String::new();
     io::stdin().read_to_string(&mut bf_input).expect("Error reading stdin");
 
-    if args.len() < 2 || args[1] == "rust" {
-        print!("{}", translate::<RustTarget>(bf_input));
+    let tokens = bf::tokenize(&bf_input.chars().collect());
+
+    if args.len() < 2 || args[1] == "rs" {
+        print!("{}", translate::<RustTarget>(&tokens));
     } else {
-        print!("{}", translate::<CTarget>(bf_input));
+        print!("{}", translate::<CTarget>(&tokens));
     }
 }
