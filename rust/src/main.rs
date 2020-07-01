@@ -16,16 +16,16 @@ fn read_file(filename: &str) -> Result<String, io::Error> {
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() < 2 {
-        panic!("missing filename");
-    }
+    let filename = match args.get(1) {
+        Some(s) => s,
+        None => panic!("missing filename")
+    };
 
-    let program = read_file(&args[1]).expect("Error reading file");
+    let contents = read_file(&filename).expect("Error reading file");
 
-    let mut interpreter = bf::Interpreter::new(
-        program.as_bytes(),
-        30000
-    ).expect("Error initializing interpreter");
+    let tokens = bf::tokenize(&contents.chars().collect());
 
-    interpreter.run().expect("Error running program");
+    let expressions = bf::parse(&tokens).expect("Error compiling program");
+
+    bf::run(&expressions).expect("Error running program");
 }

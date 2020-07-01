@@ -1,11 +1,8 @@
 use std;
 use std::io::{self, prelude::*};
-use std::collections::HashMap;
 use std::convert::TryInto;
 
-type Program = [u8];
 type Position = usize;
-type JumpMap = HashMap<Position, Position>;
 
 #[derive(Debug)]
 pub enum InvalidProgramError {
@@ -90,93 +87,132 @@ pub fn print_mem(mem: MemElem) -> Result<(), std::io::Error> {
     io::stdout().flush()
 }
 
-pub struct Interpreter <'a> {
-    program: &'a [u8],
-    state: BFState,
-    jumps: JumpMap
+#[derive(Debug, Clone, Copy)]
+pub enum Token {
+    ProgramStart,
+    ProgramEnd,
+    LoopStart(Position),
+    LoopEnd(Position),
+    IncValue(Position),
+    DecValue(Position),
+    MoveForward(Position),
+    MoveBack(Position),
+    InputValue(Position),
+    OutputValue(Position)
 }
 
-impl <'a> Interpreter <'a> {
-    pub fn new(program: &'a [u8], mem_size: usize) -> Result<Self, BFEvalError> {
-        Ok(Self {
-            program,
-            state: BFState::new(mem_size),
-            jumps: Self::_find_jumps(program)?
-        })
-    }
+pub fn tokenize(program: &Vec<char>) -> Vec<Token> {
+    let mut tokens = Vec::new();
 
-    fn _loop(program: &Program,
-             handler: &mut dyn FnMut(char, Position) -> Result<Position, BFEvalError>) 
-            -> Result<(), BFEvalError> {
-        let plen = program.len();
-        let mut pos: Position = 0;
+    tokens.push(Token::ProgramStart);
 
-        while pos < plen {
-            let opcode = program[pos] as char;
-            pos = handler(opcode, pos)?;
-        }
-
-        Ok(())
-    }
-
-    fn _find_jumps(program: &[u8]) -> Result<JumpMap, BFEvalError> {
-        let mut stack: Vec<usize> = Vec::new();
-        let mut jumps = JumpMap::new();
-
-        Self::_loop(
-            program,
-            &mut |opcode, pc| -> Result<Position, BFEvalError> { 
-                match opcode {
-                    '[' => stack.push(pc),
-                    ']' => {
-                        let target = match stack.pop() {
-                            Some(n) => Ok(n),
-                            None => Err(
-                                InvalidProgramError::
-                                UnexpectedClosingBracket(pc)
-                            )
-                        }?;
-                        jumps.insert(pc, target);
-                        jumps.insert(target, pc);
-                    }
-                    _ => ()
-                };
-                Ok(pc+1)
-            }
-        )?;
-
-        match stack.pop() {
-            Some(n) => Err(
-                BFEvalError::InvalidProgramError(
-                    InvalidProgramError::ExcessiveOpeningBrackets(n)
-                )
-            ),
-            None => Ok(jumps)
+    for (pos, opcode) in program.iter().enumerate() {
+        match opcode {
+            '[' => tokens.push(Token::LoopStart(pos)),
+            ']' => tokens.push(Token::LoopEnd(pos)),
+            '>' => tokens.push(Token::MoveForward(pos)),
+            '<' => tokens.push(Token::MoveBack(pos)),
+            '+' => tokens.push(Token::IncValue(pos)),
+            '-' => tokens.push(Token::DecValue(pos)),
+            '.' => tokens.push(Token::OutputValue(pos)),
+            ',' => tokens.push(Token::InputValue(pos)),
+            _ => (),
         }
     }
 
-    pub fn run(&mut self) -> Result<(), BFEvalError> {
-        Self::_loop(
-            self.program,
-            &mut |opcode, pc| -> Result<Position, BFEvalError> { 
-                let ret = match opcode {
-                    '[' => if self.state.read() == 0 {self.jumps[&pc]} else {pc+1},
-                    ']' => if self.state.read() != 0 {self.jumps[&pc]} else {pc+1},
-                    _ => {
-                        match opcode {
-                            '>' => self.state.fwd(),
-                            '<' => self.state.bwd(),
-                            '+' => self.state.inc(),
-                            '-' => self.state.dec(),
-                            '.' => print_mem(self.state.read())?,
-                            ',' => self.state.write(read_mem()?),
-                            _ => (),
-                        };
-                        pc+1
+    tokens.push(Token::ProgramEnd);
+
+    return tokens;
+}
+
+#[derive(Debug)]
+pub enum Expression {
+    IncValue,
+    DecValue,
+    MoveForward,
+    MoveBack,
+    InputValue,
+    OutputValue,
+    Loop(Vec<Expression>),
+}
+
+pub fn parse(tokens: &Vec<Token>) 
+    -> Result<Vec<Expression>, InvalidProgramError> {
+    let (expressions, _) = do_parse(tokens.iter(), 0)?;
+    Ok(expressions)
+}
+
+fn do_parse(mut tokens: std::slice::Iter<Token>, level: u32) 
+    -> Result<(Vec<Expression>, std::slice::Iter<Token>), InvalidProgramError>
+{
+    let mut expressions = Vec::new();
+
+    loop {
+        if let Some(token) = tokens.next() {
+            match token {
+                Token::LoopStart(_) => {
+                    let (sub_exp, next_tok) = do_parse(tokens, level + 1)?;
+                    expressions.push(Expression::Loop(sub_exp));
+                    tokens = next_tok;
+                }
+                Token::LoopEnd(pos) =>
+                    if level == 0 {
+                        return Err(InvalidProgramError::
+                                   UnexpectedClosingBracket(*pos))
+                    } else {
+                        return Ok((expressions, tokens))
+                    },
+                Token::MoveForward(_) =>
+                    expressions.push(Expression::MoveForward),
+                Token::MoveBack(_) =>
+                    expressions.push(Expression::MoveBack),
+                Token::IncValue(_) =>
+                    expressions.push(Expression::IncValue),
+                Token::DecValue(_) =>
+                    expressions.push(Expression::DecValue),
+                Token::OutputValue(_) =>
+                    expressions.push(Expression::OutputValue),
+                Token::InputValue(_) =>
+                    expressions.push(Expression::InputValue),
+                Token::ProgramStart => (),
+                Token::ProgramEnd =>
+                    if level > 0 {
+                        return Err(InvalidProgramError::
+                                   ExcessiveOpeningBrackets(0))
                     }
-                };
-                Ok(ret)
             }
-        )
+        } else {
+            break;
+        }
     }
+
+    Ok((expressions, tokens))
+}
+
+pub fn run(expressions: &Vec<Expression>) 
+    -> Result<(), BFEvalError> {
+    let mut state = BFState::new(30000);
+
+    Ok(do_run(expressions, &mut state)?)
+}
+
+fn do_run(expressions: &Vec<Expression>, state: &mut BFState)
+    -> Result<(), BFEvalError> {
+    for expression in expressions {
+        match expression {
+            Expression::MoveForward => state.fwd(),
+            Expression::MoveBack => state.bwd(),
+            Expression::IncValue => state.inc(),
+            Expression::DecValue => state.dec(),
+            Expression::OutputValue => print_mem(state.read())?,
+            Expression::InputValue => state.write(read_mem()?),
+            Expression::Loop(sub_exp) => {
+                while state.read() > 0 {
+                    do_run(sub_exp, state)?;
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
