@@ -159,12 +159,15 @@ impl Interpreter {
         }.unwrap()
     }
 
-    pub fn tick(&mut self) -> bool {
-    	let mut _yield: bool = false;
+    pub fn tick(&mut self, inst_per_cycle: usize) -> bool {
+        let mut inst_count: usize = 0;
 
-        while !_yield && self.program.ptr < self.program.len() {
+        while (inst_count < inst_per_cycle) && 
+              (self.program.ptr < self.program.len()) {
         	let opcode: u8 = self.program.read().into();
         	let opcode = opcode as char;
+            inst_count += 1;
+
             match opcode {
 	            '>' => self.memory.fwd(),
 	            '<' => self.memory.bwd(),
@@ -187,17 +190,15 @@ impl Interpreter {
 	            },
 	            '.' => {
 	            	self.output.write(self.memory.read().try_into().unwrap());
-	            	if self.memory.read() == 10 {
-	            		_yield = true
-	            	};
 	            	self.output.fwd();
 	            },
 	            _ => (),
             }
+
             self.program.ptr += 1;
         }
 
-        !_yield
+        return inst_count < inst_per_cycle;
     }
 
     pub fn render(&self) -> String {

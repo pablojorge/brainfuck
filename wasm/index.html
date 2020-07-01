@@ -41,7 +41,7 @@
         var start = new Date();
 
         const renderLoop = () => {
-          var finished = intepreter.tick();
+          var finished = intepreter.tick(10000);
 
           canvas.textContent = intepreter.render();
 

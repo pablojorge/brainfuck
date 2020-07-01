@@ -306,10 +306,10 @@ function WASMInterpreterProxy(program, input, onTick, onFinish) {
 }
 
 WASMInterpreterProxy.prototype.runCycle = function(instPerCycle) {
-    var finished = this.wasm_intepreter.tick();
+    var finished = this.wasm_intepreter.tick(instPerCycle);
     this.output = this.wasm_intepreter.render();
 
-    this.cycles = 0;
+    this.cycles += 1;
     this.memory = {0: 0};
     this.mem_ptr = 0;
     this.mem_size = 1;    
