@@ -20,9 +20,9 @@ $(document).ready(function () {
         event.preventDefault();
         ui.stop();
     });
-    $("#btn-optimize").click(function (event) {
+    $("#btn-minify").click(function (event) {
         event.preventDefault();
-        $('#program').val(optimize($('#program').val()));
+        $('#program').val(minify($('#program').val()));
     });
     resizePanels();
 })
@@ -48,7 +48,7 @@ function resizePanels() {
     $('#output').css('height', height * .7);
 }
 
-function optimize(program) {
+function minify(program) {
     /* remove invalid ops: */
     var valid_op = function(op) {
         return '-+<>[],.'.indexOf(op) > -1;
@@ -129,7 +129,7 @@ InterpreterUI.prototype.onStart = function() {
 
     $('#output').val('');
 
-    $("#btn-optimize").addClass('disabled');
+    $("#btn-minify").addClass('disabled');
 
     $('#cycles-count').html('0');
     $('#running-time').html("0.00 seconds");
@@ -199,7 +199,7 @@ InterpreterUI.prototype.onFinish = function (result) {
     $('#btn-pause').addClass("disabled");
     $('#btn-step').removeClass("disabled");
     $('#btn-stop').addClass("disabled");
-    $("#btn-optimize").removeClass("disabled");
+    $("#btn-minify").removeClass("disabled");
 
     $('#result').removeClass('label-default');
     $('#result').addClass(result.error 
