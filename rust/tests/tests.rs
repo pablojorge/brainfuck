@@ -56,3 +56,14 @@ fn test_parse_fails_with_extra_closing_bracket() -> Result<(), String>{
         _ => Err(String::from("Extra opening bracket error not triggered")),
     }
 }
+
+#[test]
+fn test_execution_produces_expected_mem_contents() {
+    let program = "+++>+++>+++--<-";
+    let tokens = bf::tokenize(&program.chars().collect());
+    let expressions = bf::parse(&tokens).unwrap();
+    let result = bf::run(&expressions).unwrap();
+    let expected = [3, 2, 1];
+
+    assert_eq!(result.buf()[0..3], expected);
+}

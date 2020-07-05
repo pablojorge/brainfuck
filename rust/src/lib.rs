@@ -2,6 +2,11 @@ use std;
 use std::io::{self, prelude::*};
 use std::convert::TryInto;
 
+use std::ops::{AddAssign, SubAssign};
+
+extern crate num;
+use num::{Zero,One};
+
 type Position = usize;
 
 #[derive(Debug)]
@@ -28,26 +33,41 @@ impl std::convert::From<InvalidProgramError> for BFEvalError {
     }
 }
 
-type MemElem = u32;
-type Memory = Vec<MemElem>;
-
-pub struct BFState {
-    mem: Memory,
+pub struct Buffer<T> {
+    buf: Vec<T>,
     ptr: usize,
 }
 
-impl BFState {
-    pub fn new(mem_size: usize) -> Self {
-        let mut state = Self {
-            mem: Vec::with_capacity(mem_size),
+impl<T> Buffer<T> 
+    where T: Zero + One + Copy + AddAssign + SubAssign {
+    pub fn new(buf_size: usize) -> Self {
+        let mut buffer = Self {
+            buf: Vec::with_capacity(buf_size),
             ptr: 0 
         };
 
-        for _ in 0..mem_size {
-            state.mem.push(0)
+        for _ in 0..buf_size {
+            buffer.buf.push(T::zero())
         };
 
-        state
+        buffer
+    }
+
+    pub fn clone(buf: &[T]) -> Self {
+        let mut buffer = Self {
+            buf: Vec::with_capacity(buf.len()),
+            ptr: 0 
+        };
+
+        for i in 0..buf.len() {
+            buffer.buf.push(buf[i]);
+        };
+
+        buffer
+    }
+
+    pub fn buf(&self) -> &[T] {
+        &self.buf[..]
     }
 
     pub fn fwd(&mut self) {
@@ -59,29 +79,29 @@ impl BFState {
     }
 
     pub fn inc(&mut self) {
-        self.mem[self.ptr] += 1;
+        self.buf[self.ptr] += T::one();
     }
 
     pub fn dec(&mut self) {
-        self.mem[self.ptr] -= 1;
+        self.buf[self.ptr] -= T::one();
     }
 
-    pub fn read(&self) -> MemElem {
-        self.mem[self.ptr]
+    pub fn read(&self) -> T {
+        self.buf[self.ptr]
     }
 
-    pub fn write(&mut self, val: MemElem) {
-        self.mem[self.ptr] = val;
+    pub fn write(&mut self, val: T) {
+        self.buf[self.ptr] = val;
     }
 }
 
-pub fn read_mem() -> Result<MemElem, std::io::Error> {
+pub fn read_mem() -> Result<u32, std::io::Error> {
     let mut input: [u8; 1] = [0];
     io::stdin().read(&mut input)?;
     Ok(input[0].into())
 }
 
-pub fn print_mem(mem: MemElem) -> Result<(), std::io::Error> {
+pub fn print_mem(mem: u32) -> Result<(), std::io::Error> {
     let x: u8 = mem.try_into().unwrap();
     print!("{}", x as char);
     io::stdout().flush()
@@ -190,25 +210,27 @@ fn do_parse(mut tokens: std::slice::Iter<Token>, level: u32)
 }
 
 pub fn run(expressions: &Vec<Expression>) 
-    -> Result<(), BFEvalError> {
-    let mut state = BFState::new(30000);
+    -> Result<Buffer<u32>, BFEvalError> {
+    let mut mem = Buffer::<u32>::new(30000);
 
-    Ok(do_run(expressions, &mut state)?)
+    do_run(expressions, &mut mem)?;
+
+    Ok(mem)
 }
 
-fn do_run(expressions: &Vec<Expression>, state: &mut BFState)
+fn do_run(expressions: &Vec<Expression>, mem: &mut Buffer<u32>)
     -> Result<(), BFEvalError> {
     for expression in expressions {
         match expression {
-            Expression::MoveForward => state.fwd(),
-            Expression::MoveBack => state.bwd(),
-            Expression::IncValue => state.inc(),
-            Expression::DecValue => state.dec(),
-            Expression::OutputValue => print_mem(state.read())?,
-            Expression::InputValue => state.write(read_mem()?),
+            Expression::MoveForward => mem.fwd(),
+            Expression::MoveBack => mem.bwd(),
+            Expression::IncValue => mem.inc(),
+            Expression::DecValue => mem.dec(),
+            Expression::OutputValue => print_mem(mem.read())?,
+            Expression::InputValue => mem.write(read_mem()?),
             Expression::Loop(sub_exp) => {
-                while state.read() > 0 {
-                    do_run(sub_exp, state)?;
+                while mem.read() > 0 {
+                    do_run(sub_exp, mem)?;
                 }
             }
         }

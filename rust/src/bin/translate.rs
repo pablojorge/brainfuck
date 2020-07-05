@@ -16,15 +16,15 @@ impl Target for RustTarget {
                 use brainfuck as bf;
 
                 fn main() -> Result<(), std::io::Error> {
-                    let mut state = bf::BFState::new(30000);
+                    let mut mem = bf::Buffer::<u32>::new(30000);
             "#,
-            bf::Token::MoveForward(_) => "state.fwd();",
-            bf::Token::MoveBack(_)    => "state.bwd();",
-            bf::Token::IncValue(_)    => "state.inc();",
-            bf::Token::DecValue(_)    => "state.dec();",
-            bf::Token::OutputValue(_) => "bf::print_mem(state.read())?;",
-            bf::Token::InputValue(_)  => "state.write(bf::read_mem()?);",
-            bf::Token::LoopStart(_)   => "while state.read() > 0 {",
+            bf::Token::MoveForward(_) => "mem.fwd();",
+            bf::Token::MoveBack(_)    => "mem.bwd();",
+            bf::Token::IncValue(_)    => "mem.inc();",
+            bf::Token::DecValue(_)    => "mem.dec();",
+            bf::Token::OutputValue(_) => "bf::print_mem(mem.read())?;",
+            bf::Token::InputValue(_)  => "mem.write(bf::read_mem()?);",
+            bf::Token::LoopStart(_)   => "while mem.read() > 0 {",
             bf::Token::LoopEnd(_)     => "}",
             bf::Token::ProgramEnd     => r#"
                     Ok(())
