@@ -1,7 +1,7 @@
 use std::io::{self, prelude::*};
 use std::env;
 
-mod bf;
+use brainfuck as bf;
 
 trait Target {
     fn translate(token: &bf::Token) -> &'static str;
@@ -13,7 +13,7 @@ impl Target for RustTarget {
     fn translate(token: &bf::Token) -> &'static str {
         match token {
             bf::Token::ProgramStart   => r#"
-                mod bf;
+                use brainfuck as bf;
 
                 fn main() -> Result<(), std::io::Error> {
                     let mut state = bf::BFState::new(30000);
@@ -25,7 +25,7 @@ impl Target for RustTarget {
             bf::Token::OutputValue(_) => "bf::print_mem(state.read())?;",
             bf::Token::InputValue(_)  => "state.write(bf::read_mem()?);",
             bf::Token::LoopStart(_)   => "while state.read() > 0 {",
-            bf::Token::LoopEnd(pos)   => "}",
+            bf::Token::LoopEnd(_)     => "}",
             bf::Token::ProgramEnd     => r#"
                     Ok(())
                 }
@@ -56,7 +56,7 @@ impl Target for CTarget {
                 if (*ptr == EOF) exit(0);
             ",
             bf::Token::LoopStart(_)   =>  "while(*ptr) {",
-            bf::Token::LoopEnd(pos)   => "}",
+            bf::Token::LoopEnd(_)     => "}",
             bf::Token::ProgramEnd     => "
                     return 0;
                 }

@@ -2,7 +2,7 @@ use std::io::{self, prelude::*};
 use std::env;
 use std::fs::File;
 
-mod bf;
+use brainfuck as bf;
 
 fn read_file(filename: &str) -> Result<String, io::Error> {
     let mut contents = String::new();

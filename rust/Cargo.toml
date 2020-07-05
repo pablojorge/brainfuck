@@ -1,6 +1,6 @@
 [package]
 name = "brainfuck"
-default-run = "brainfuck"
+default-run = "main"
 version = "0.1.0"
 authors = ["Pablo Jorge <pablohjorge@gmail.com>"]
 edition = "2018"
@@ -11,7 +11,3 @@ edition = "2018"
 
 [profile.dev]
 opt-level = 3
-
-[[bin]]
-name = "translate"
-path = "src/translate.rs"

@@ -1,11 +1,11 @@
 all:
 	cargo build
 
-%: %.rs
-	rustc -C opt-level=3 $< -o $@
-
 %: %.c
 	$(CC) -O1 $< -o $@
 
+test:
+	cargo test
+
 clean:
-	rm -rf tests $(shell cat .gitignore)
+	rm -rf target

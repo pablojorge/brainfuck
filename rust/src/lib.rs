@@ -87,7 +87,7 @@ pub fn print_mem(mem: MemElem) -> Result<(), std::io::Error> {
     io::stdout().flush()
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Token {
     ProgramStart,
     ProgramEnd,
@@ -125,7 +125,7 @@ pub fn tokenize(program: &Vec<char>) -> Vec<Token> {
     return tokens;
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Expression {
     IncValue,
     DecValue,
