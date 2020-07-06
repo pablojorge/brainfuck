@@ -4,6 +4,7 @@ WASM_PKG=$(WASM_ROOT)/pkg
 .PHONY: build
 build:
 	$(MAKE) -C $(WASM_ROOT) build
+	mkdir -p pkg
 	cp $(WASM_PKG)/wasm_brainfuck.js $(WASM_PKG)/wasm_brainfuck_bg.wasm ./pkg
 
 .PHONY: serve

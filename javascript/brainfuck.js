@@ -24,6 +24,43 @@ $(document).ready(function () {
         event.preventDefault();
         $('#program').val(minify($('#program').val()));
     });
+
+    var programs = [
+        {name: "hello",      desc: "Hello World!"},
+        {name: "666",        desc: "Print 666"},
+        {sep: true},
+        {name: "numwarp",    desc: "Number Warper"},
+        {name: "fibonacci",  desc: "Fibonacci Sequence Generator"},
+        {name: "primes",     desc: "Prime Numbers Generator"},
+        {sep: true},
+        {name: "sierpinski", desc: "Sierpinski Triangle"},
+        {name: "mandelbrot", desc: "Mandelbrot Set Generator"},
+        {sep: true},
+        {name: "dbfi",       desc: "Brainfuck Interpreter"},
+        {name: "dbf2c",      desc: "Brainfuck to C Translator"},
+    ]
+    var programs_root = "https://raw.githubusercontent.com/pablojorge/brainfuck/master/programs/";
+
+    for (var i = 0; i < programs.length; i++) {
+        if (programs[i].sep) {
+            $("#sample-programs").append("<li role=\"separator\" class=\"divider\"></li>");
+            continue;
+        }
+        $("#sample-programs").append(
+            $("<li></li>").append(
+                $("<a href=\"#\" target=" + programs[i].name + ">" + programs[i].desc + "</a>").bind(
+                    'click',
+                    function(event) {
+                        event.preventDefault();
+                        $.get(programs_root + $(this).attr("target") + ".bf", function(data, status){
+                            $('#program').html(data);
+                        })
+                    }
+                )
+            )
+        );
+    }
+
     resizePanels();
 })
 

@@ -46,7 +46,7 @@
           <form class="navbar-form navbar-right">
             <small>Instructions per cycle:</small>
             <input type="number" class="form-control" 
-                   value="1" min="1" id="inst-per-cycle"
+                   value="100000" min="1" id="inst-per-cycle"
                    style="width: 120px;">
             <small>Cycle delay (ms):</small>
             <input type="number" class="form-control" 
@@ -94,6 +94,13 @@
                 <small> Opcode: </small>
                 <span id="program-opcode" class="label label-default">N/A</span>
                 <div style="float: right; margin-top: -10px;">
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      Program <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" id="sample-programs">
+                    </ul>
+                  </div>
                   <button class="btn btn-primary" id="btn-minify">
                     <span class="glyphicon glyphicon-flash"></span>
                     Minify
@@ -102,7 +109,7 @@
               </h5>
             </div>
             <div class="panel-body">
-              <textarea wrap=off id="program">+[&gt;,.&lt;]</textarea>
+              <textarea wrap=off id="program">+[,.]</textarea>
             </div>
           </div>
         </div>
@@ -120,7 +127,8 @@
               </h5>
             </div>
             <div class="panel-body">
-              <textarea wrap=off id="input">1234</textarea>
+              <textarea wrap=off id="input">1234
+              </textarea>
             </div>
           </div>
         </div>
