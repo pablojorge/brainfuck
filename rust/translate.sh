@@ -14,7 +14,7 @@ elif [ "$2" = "c" ]; then
 	time ./$TARGET
 	rm $TARGET
 else
-	echo "Unsupported"
+	echo "Unsupported target language"
 	exit 1
 fi
 

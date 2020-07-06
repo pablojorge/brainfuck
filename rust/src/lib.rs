@@ -239,7 +239,7 @@ pub fn optimize(expressions: &Vec<Expression>) -> Vec<Expression> {
                 );
             },
 
-            (Some(&Expression::IncValue(n)),    Expression::IncValue(_)) =>
+            (Some(&Expression::IncValue(n)),    Expression::IncValue(1)) =>
                 replace_top(&mut optimized,     Expression::IncValue(n+1)),
 
             (Some(&Expression::DecValue(n)),    Expression::DecValue(1)) =>

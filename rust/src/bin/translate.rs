@@ -4,73 +4,98 @@ use std::env;
 use brainfuck as bf;
 
 trait Target {
-    fn translate(token: &bf::Token) -> &'static str;
+    fn preamble() -> String;
+    fn translate(token: &bf::Expression) -> String;
+    fn epilogue() -> String;
 }
 
 struct RustTarget;
 
 impl Target for RustTarget {
-    fn translate(token: &bf::Token) -> &'static str {
-        match token {
-            bf::Token::ProgramStart   => r#"
-                use brainfuck as bf;
+    fn preamble() -> String {
+        String::from(r#"
+            use brainfuck as bf;
 
-                fn main() -> Result<(), std::io::Error> {
-                    let mut mem = bf::Buffer::<u32>::new(30000);
-            "#,
-            bf::Token::MoveForward(_) => "mem.fwd(1);",
-            bf::Token::MoveBack(_)    => "mem.bwd(1);",
-            bf::Token::IncValue(_)    => "mem.inc(1);",
-            bf::Token::DecValue(_)    => "mem.dec(1);",
-            bf::Token::OutputValue(_) => "bf::print_mem(mem.read())?;",
-            bf::Token::InputValue(_)  => "mem.write(bf::read_mem()?);",
-            bf::Token::LoopStart(_)   => "while mem.read() > 0 {",
-            bf::Token::LoopEnd(_)     => "}",
-            bf::Token::ProgramEnd     => r#"
-                    Ok(())
-                }
-            "#
+            fn main() -> Result<(), std::io::Error> {
+                let mut mem = bf::Buffer::<u32>::new(30000);
+        "#)
+    }
+
+    fn translate(expression: &bf::Expression) -> String {
+        match expression {
+            &bf::Expression::MoveForward(n) => format!("mem.fwd({});", n),
+            &bf::Expression::MoveBack(n)    => format!("mem.bwd({});", n),
+            &bf::Expression::IncValue(n)    => format!("mem.inc({});", n),
+            &bf::Expression::DecValue(n)    => format!("mem.dec({});", n),
+             bf::Expression::OutputValue    => format!("bf::print_mem(mem.read())?;"),
+             bf::Expression::InputValue     => format!("mem.write(bf::read_mem()?);"),
+             bf::Expression::Loop(sub_exp)  => format!(
+                "while mem.read() > 0 {{ {} }}",
+                do_translate::<Self>(sub_exp)
+            ),
         }
+    }
+
+    fn epilogue() -> String {
+        String::from(r#"
+                Ok(())
+            }
+        "#)
     }
 }
 
 struct CTarget;
 
 impl Target for CTarget {
-    fn translate(token: &bf::Token) -> &'static str {
-        match token {
-            bf::Token::ProgramStart   => "
-                #include <stdio.h>
-                #include <stdlib.h>
-                int main() {
-                    char mem[30000],
-                    *ptr = mem;
-            ",
-            bf::Token::MoveForward(_) => "++ptr;",
-            bf::Token::MoveBack(_)    => "--ptr;",
-            bf::Token::IncValue(_)    => "++(*ptr);",
-            bf::Token::DecValue(_)    => "--(*ptr);",
-            bf::Token::OutputValue(_) => "putchar(*ptr);",
-            bf::Token::InputValue(_)  => "
-                *ptr = getchar();
-                if (*ptr == EOF) exit(0);
-            ",
-            bf::Token::LoopStart(_)   =>  "while(*ptr) {",
-            bf::Token::LoopEnd(_)     => "}",
-            bf::Token::ProgramEnd     => "
-                    return 0;
-                }
-            "
+    fn preamble() -> String {
+        String::from("
+            #include <stdio.h>
+            #include <stdlib.h>
+            int main() {
+                char mem[30000],
+                *ptr = mem;
+        ")
+    }
+
+    fn translate(expression: &bf::Expression) -> String {
+        match expression {
+            &bf::Expression::MoveForward(n) => format!(" ptr+={};", n),
+            &bf::Expression::MoveBack(n)    => format!(" ptr-={};", n),
+            &bf::Expression::IncValue(n)    => format!("*ptr+={};", n),
+            &bf::Expression::DecValue(n)    => format!("*ptr-={};", n),
+             bf::Expression::OutputValue    => format!("putchar(*ptr);"),
+             bf::Expression::InputValue     => format!("*ptr = getchar();"),
+             bf::Expression::Loop(sub_exp)  => format!(
+                "while(*ptr){{ {} }}",
+                do_translate::<Self>(sub_exp)
+            ),
         }
+    }
+
+    fn epilogue() -> String {
+        String::from("
+                return 0;
+            }
+        ")
     }
 }
 
-fn translate<T: Target>(tokens: &Vec<bf::Token>) -> String {
+fn do_translate<T: Target>(expressions: &Vec<bf::Expression>) -> String {
+    let mut ret = String::new();
+
+    for expression in expressions {
+        ret.push_str(&T::translate(expression))
+    }
+
+    ret
+}
+
+fn translate<T: Target>(expressions: &Vec<bf::Expression>) -> String {
     let mut program = String::new();
 
-    for token in tokens {
-        program.push_str(&T::translate(token))
-    }
+    program.push_str(&T::preamble());
+    program.push_str(&do_translate::<T>(expressions));
+    program.push_str(&T::epilogue());
 
     program
 }
@@ -82,10 +107,14 @@ fn main() {
     io::stdin().read_to_string(&mut bf_input).expect("Error reading stdin");
 
     let tokens = bf::tokenize(&bf_input.chars().collect());
+    let expressions = bf::parse(&tokens).expect("Error compiling program");
+    let expressions = bf::optimize(&expressions);
 
     if args.len() < 2 || args[1] == "rs" {
-        print!("{}", translate::<RustTarget>(&tokens));
+        print!("{}", translate::<RustTarget>(&expressions));
+    } else if args[1] == "c" {
+        print!("{}", translate::<CTarget>(&expressions));
     } else {
-        print!("{}", translate::<CTarget>(&tokens));
+        panic!("{:?}: Unsupported target language", args[1]);
     }
 }
