@@ -27,5 +27,7 @@ fn main() {
 
     let expressions = bf::parse(&tokens).expect("Error compiling program");
 
+    let expressions = bf::optimize(&expressions);
+
     bf::run(&expressions).expect("Error running program");
 }

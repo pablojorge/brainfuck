@@ -18,10 +18,10 @@ impl Target for RustTarget {
                 fn main() -> Result<(), std::io::Error> {
                     let mut mem = bf::Buffer::<u32>::new(30000);
             "#,
-            bf::Token::MoveForward(_) => "mem.fwd();",
-            bf::Token::MoveBack(_)    => "mem.bwd();",
-            bf::Token::IncValue(_)    => "mem.inc();",
-            bf::Token::DecValue(_)    => "mem.dec();",
+            bf::Token::MoveForward(_) => "mem.fwd(1);",
+            bf::Token::MoveBack(_)    => "mem.bwd(1);",
+            bf::Token::IncValue(_)    => "mem.inc(1);",
+            bf::Token::DecValue(_)    => "mem.dec(1);",
             bf::Token::OutputValue(_) => "bf::print_mem(mem.read())?;",
             bf::Token::InputValue(_)  => "mem.write(bf::read_mem()?);",
             bf::Token::LoopStart(_)   => "while mem.read() > 0 {",

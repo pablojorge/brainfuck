@@ -23,14 +23,14 @@ fn test_parse_wellformed_program() {
     let tokens = bf::tokenize(&program.chars().collect());
     let result = bf::parse(&tokens).unwrap();
     let expected = vec![
-        bf::Expression::IncValue,
-        bf::Expression::DecValue,
-        bf::Expression::IncValue,
+        bf::Expression::IncValue(1),
+        bf::Expression::DecValue(1),
+        bf::Expression::IncValue(1),
         bf::Expression::Loop(vec![
-            bf::Expression::MoveForward,
+            bf::Expression::MoveForward(1),
             bf::Expression::InputValue,
             bf::Expression::OutputValue,
-            bf::Expression::MoveBack,
+            bf::Expression::MoveBack(1),
         ]),
     ];
 
@@ -66,4 +66,52 @@ fn test_execution_produces_expected_mem_contents() {
     let expected = [3, 2, 1];
 
     assert_eq!(result.buf()[0..3], expected);
+}
+
+#[test]
+fn test_optimizer() {
+    let program = "+++>[+++>[+++--]<-]";
+    let tokens = bf::tokenize(&program.chars().collect());
+
+    let expressions = bf::parse(&tokens).unwrap();
+    let expected = vec![
+        bf::Expression::IncValue(1),
+        bf::Expression::IncValue(1),
+        bf::Expression::IncValue(1),
+        bf::Expression::MoveForward(1),
+        bf::Expression::Loop(vec![
+            bf::Expression::IncValue(1),
+            bf::Expression::IncValue(1),
+            bf::Expression::IncValue(1),
+            bf::Expression::MoveForward(1),
+            bf::Expression::Loop(vec![
+                bf::Expression::IncValue(1),
+                bf::Expression::IncValue(1),
+                bf::Expression::IncValue(1),
+                bf::Expression::DecValue(1),
+                bf::Expression::DecValue(1),
+            ]),
+            bf::Expression::MoveBack(1),
+            bf::Expression::DecValue(1),
+        ]),
+    ];
+    assert_eq!(expressions, expected);
+
+    let optimized = bf::optimize(&expressions);
+    let expected = vec![
+        bf::Expression::IncValue(3),
+        bf::Expression::MoveForward(1),
+        bf::Expression::Loop(vec![
+            bf::Expression::IncValue(3),
+            bf::Expression::MoveForward(1),
+            bf::Expression::Loop(vec![
+                bf::Expression::IncValue(3),
+                bf::Expression::DecValue(2),
+            ]),
+            bf::Expression::MoveBack(1),
+            bf::Expression::DecValue(1),
+        ]),
+    ];
+
+    assert_eq!(optimized, expected);
 }

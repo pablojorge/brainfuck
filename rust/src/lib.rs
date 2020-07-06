@@ -70,20 +70,20 @@ impl<T> Buffer<T>
         &self.buf[..]
     }
 
-    pub fn fwd(&mut self) {
-        self.ptr += 1;
+    pub fn fwd(&mut self, offset: usize) {
+        self.ptr += offset;
     }
 
-    pub fn bwd(&mut self) {
-        self.ptr -= 1;
+    pub fn bwd(&mut self, offset: usize) {
+        self.ptr -= offset;
     }
 
-    pub fn inc(&mut self) {
-        self.buf[self.ptr] += T::one();
+    pub fn inc(&mut self, offset: T) {
+        self.buf[self.ptr] += offset;
     }
 
-    pub fn dec(&mut self) {
-        self.buf[self.ptr] -= T::one();
+    pub fn dec(&mut self, offset: T) {
+        self.buf[self.ptr] -= offset;
     }
 
     pub fn read(&self) -> T {
@@ -147,13 +147,27 @@ pub fn tokenize(program: &Vec<char>) -> Vec<Token> {
 
 #[derive(Debug, PartialEq)]
 pub enum Expression {
-    IncValue,
-    DecValue,
-    MoveForward,
-    MoveBack,
+    IncValue(u32),
+    DecValue(u32),
+    MoveForward(usize),
+    MoveBack(usize),
     InputValue,
     OutputValue,
     Loop(Vec<Expression>),
+}
+
+impl Clone for Expression {
+    fn clone(self: &Expression) -> Expression {
+        match self {
+            &Expression::IncValue(n)    => Expression::IncValue(n),
+            &Expression::DecValue(n)    => Expression::DecValue(n),
+            &Expression::MoveForward(n) => Expression::MoveForward(n),
+            &Expression::MoveBack(n)    => Expression::MoveBack(n),
+            &Expression::InputValue     => Expression::InputValue,
+            &Expression::OutputValue    => Expression::OutputValue,
+             Expression::Loop(sub_exp)  => Expression::Loop(sub_exp.clone()),
+        }
+    }
 }
 
 pub fn parse(tokens: &Vec<Token>) 
@@ -183,13 +197,13 @@ fn do_parse(mut tokens: std::slice::Iter<Token>, level: u32)
                         return Ok((expressions, tokens))
                     },
                 Token::MoveForward(_) =>
-                    expressions.push(Expression::MoveForward),
+                    expressions.push(Expression::MoveForward(1)),
                 Token::MoveBack(_) =>
-                    expressions.push(Expression::MoveBack),
+                    expressions.push(Expression::MoveBack(1)),
                 Token::IncValue(_) =>
-                    expressions.push(Expression::IncValue),
+                    expressions.push(Expression::IncValue(1)),
                 Token::DecValue(_) =>
-                    expressions.push(Expression::DecValue),
+                    expressions.push(Expression::DecValue(1)),
                 Token::OutputValue(_) =>
                     expressions.push(Expression::OutputValue),
                 Token::InputValue(_) =>
@@ -209,6 +223,42 @@ fn do_parse(mut tokens: std::slice::Iter<Token>, level: u32)
     Ok((expressions, tokens))
 }
 
+fn replace_top<T>(v: &mut Vec<T>, e: T) {
+    v.pop();
+    v.push(e);
+}
+
+pub fn optimize(expressions: &Vec<Expression>) -> Vec<Expression> {
+    let mut optimized: Vec<Expression> = Vec::new();
+
+    for expression in expressions {
+        match (optimized.last(), expression) {
+            (_, Expression::Loop(sub_exp)) => {
+                optimized.push(
+                    Expression::Loop(optimize(sub_exp))
+                );
+            },
+
+            (Some(&Expression::IncValue(n)),    Expression::IncValue(_)) =>
+                replace_top(&mut optimized,     Expression::IncValue(n+1)),
+
+            (Some(&Expression::DecValue(n)),    Expression::DecValue(1)) =>
+                replace_top(&mut optimized,     Expression::DecValue(n+1)),
+
+            (Some(&Expression::MoveForward(n)), Expression::MoveForward(1)) =>
+                replace_top(&mut optimized,     Expression::MoveForward(n+1)),
+
+            (Some(&Expression::MoveBack(n)),    Expression::MoveBack(1)) =>
+                replace_top(&mut optimized,     Expression::MoveBack(n+1)),
+
+            (_, e) => 
+                optimized.push(e.clone()),
+        }
+    }
+
+    optimized
+}
+
 pub fn run(expressions: &Vec<Expression>) 
     -> Result<Buffer<u32>, BFEvalError> {
     let mut mem = Buffer::<u32>::new(30000);
@@ -222,13 +272,13 @@ fn do_run(expressions: &Vec<Expression>, mem: &mut Buffer<u32>)
     -> Result<(), BFEvalError> {
     for expression in expressions {
         match expression {
-            Expression::MoveForward => mem.fwd(),
-            Expression::MoveBack => mem.bwd(),
-            Expression::IncValue => mem.inc(),
-            Expression::DecValue => mem.dec(),
-            Expression::OutputValue => print_mem(mem.read())?,
-            Expression::InputValue => mem.write(read_mem()?),
-            Expression::Loop(sub_exp) => {
+            &Expression::MoveForward(n) => mem.fwd(n),
+            &Expression::MoveBack(n)    => mem.bwd(n),
+            &Expression::IncValue(n)    => mem.inc(n),
+            &Expression::DecValue(n)    => mem.dec(n),
+             Expression::OutputValue    => print_mem(mem.read())?,
+             Expression::InputValue     => mem.write(read_mem()?),
+             Expression::Loop(sub_exp)  => {
                 while mem.read() > 0 {
                     do_run(sub_exp, mem)?;
                 }
