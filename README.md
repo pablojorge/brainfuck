@@ -4,20 +4,20 @@ A collection of [brainfuck](http://www.muppetlabs.com/~breadbox/bf/) interpreter
 
 ## Contents
 
-- [Intro](#Intro)
-- [Programs](#Programs)
-- [Languages](#Languages)
+- [Intro](#intro)
+- [Programs](#programs)
+- [Languages](#languages)
     - [asm](#asm)
-    - [C](#C)
-    - [Golang](#Go) (contributed by [Philip K.](https://github.com/phikal))
-    - [Haskell](#Haskell)
-    - [Javascript](#Javascript)
-    - [Lua](#Lua) (contributed by [François Perrad](https://github.com/fperrad))
-    - [Python](#Python)
-    - [Rust](#Rust)
-    - [WASM](#WASM)
-- [Benchmark](#Benchmark)
-- [See also](#See_Also)
+    - [C](#c)
+    - [Golang](#go) (contributed by [Philip K.](https://github.com/phikal))
+    - [Haskell](#haskell)
+    - [Javascript](#javascript)
+    - [Lua](#lua) (contributed by [François Perrad](https://github.com/fperrad))
+    - [Python](#python)
+    - [Rust](#rust)
+    - [WASM](#wasm)
+- [Benchmark](#benchmark)
+- [See also](#see-also)
 
 ## Intro
 
@@ -84,6 +84,7 @@ Running the number warper with the go interpreter:
 ### Haskell
 
 Interpreter source: [haskell/brainfuck.hs](haskell/brainfuck.hs)
+
 Translator to C: [haskell/bf2c.hs](haskell/bf2c.hs)
 
 To run the interpreter:
@@ -131,6 +132,7 @@ Alternatively, use the online version available at <http://pablojorge.github.io/
 ### Lua
 
 Interpreter source: [lua/brainfuck.lua](lua/brainfuck.lua)
+
 Translator source: [lua/bf2lua.lua](lua/bf2lua.lua)
 
 The interpreter is compatible with Lua 5.1, 5.2 and 5.3, and runs with [LuaJIT](http://luajit.org/). To run it:
@@ -148,8 +150,11 @@ Running the same program, but the version translated to Lua:
 ### Python
 
 Original, unoptimized, verbose interpreter: [python/brainfuck.py](python/brainfuck.py).
+
 Optimized (no method lookups, pre-computed jumps over minified source):  [python/brainfuck-simple.py](python/brainfuck-simple.py).
+
 Slightly modified version of the optimized interpreter so it can be translated to C, using RPython: [python/brainfuck-rpython.py](python/brainfuck-rpython.py)
+
 JIT-enabled version: [python/brainfuck-rpython-jit.py](python/brainfuck-rpython-jit.py)
 
 Using the plain python interpreter to run a "helloworld" program:
@@ -182,6 +187,7 @@ To use the JIT-enabled version (thanks [Gsam](https://github.com/GSam) for the s
 ### Rust
 
 Interpreter source: [rust/src/lib.rs](rust/src/lib.rs). Includes some slightly improved optimizations, like compressing identical contiguous operations.
+
 Translator source: [rust/src/bin/translate.rs](rust/src/bin/translate.rs). Supports translating to Rust and C.
 
 To run the interpreter:
