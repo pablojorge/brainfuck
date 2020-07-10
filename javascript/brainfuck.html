@@ -27,36 +27,38 @@
       <div class="container-fluid">
         <div class="navbar-header" style="display: flex;">
           <a class="navbar-brand" href="#">Brainfuck</a>
-        <iframe class="github-btn" 
-              src="http://ghbtns.com/github-btn.html?user=pablojorge&amp;repo=brainfuck&amp;type=watch&amp;count=true" 
-              allowtransparency="true" 
-              frameborder="0"
-              style="margin-left:15px; 
-                     margin-top: 15px" 
-              scrolling="0" 
-              width="80px" 
-              height="20px">
-        </iframe>
-        <iframe class="github-btn" 
-              src="http://ghbtns.com/github-btn.html?user=pablojorge&amp;repo=brainfuck&amp;type=fork&amp;count=true" 
-              allowtransparency="true" 
-              frameborder="0" 
-              style="margin-top: 15px" 
-              scrolling="0" 
-              width="80px" 
-              height="20px">
-        </iframe>          
+          <div style="margin-left:10px; margin-top: 10px" >
+            <a class="github-button"
+               href="https://github.com/pablojorge/brainfuck"
+               data-icon="octicon-star"
+               data-size="large"
+               data-show-count="true"
+               aria-label="Star pablojorge/brainfuck on GitHub">Star</a>
+            <a class="github-button"
+               href="https://github.com/pablojorge/brainfuck/fork"
+               data-icon="octicon-repo-forked"
+               data-size="large"
+               data-show-count="true"
+               aria-label="Fork pablojorge/brainfuck on GitHub">Fork</a>
+           </div>
         </div>
         <div class="navbar-collapse collapse">
           <form class="navbar-form navbar-right">
             <small>Instructions per cycle:</small>
             <input type="number" class="form-control" 
-                   value="1" min="1" id="inst-per-cycle"
-                   style="width: 100px;">
+                   value="100000" min="1" id="inst-per-cycle"
+                   style="width: 120px;">
             <small>Cycle delay (ms):</small>
             <input type="number" class="form-control" 
                    value="0" min="0" id="cycle-delay"
                    style="width: 80px;">
+            <div class="form-group">
+              <small>Engine:</small>
+              <select id="select-engine" class="form-control">
+                <option value="js">JS</option>
+                <option value="wasm">WASM</option>
+              </select>
+            </div>
             <button class="btn btn-success" id="btn-start">
               <span class="glyphicon glyphicon-play"></span>
               <span id="btn-start-label">Start</span>
@@ -92,15 +94,22 @@
                 <small> Opcode: </small>
                 <span id="program-opcode" class="label label-default">N/A</span>
                 <div style="float: right; margin-top: -10px;">
-                  <button class="btn btn-primary" id="btn-optimize">
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      Program <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" id="sample-programs">
+                    </ul>
+                  </div>
+                  <button class="btn btn-primary" id="btn-minify">
                     <span class="glyphicon glyphicon-flash"></span>
-                    Optimize
+                    Minify
                   </button>
                 </div>
               </h5>
             </div>
             <div class="panel-body">
-              <textarea wrap=off id="program">+[&gt;,.&lt;]</textarea>
+              <textarea wrap=off id="program">+[,.]</textarea>
             </div>
           </div>
         </div>
@@ -118,7 +127,8 @@
               </h5>
             </div>
             <div class="panel-body">
-              <textarea wrap=off id="input">1234</textarea>
+              <textarea wrap=off id="input">1234
+              </textarea>
             </div>
           </div>
         </div>
@@ -153,6 +163,8 @@
                 <span id="cycles-count" class="badge">N/A</span>
                 <small> Running time: </small>
                 <span id="running-time" class="label label-default">N/A</span>
+                <small> Speed: </small>
+                <span id="speed" class="label label-default">N/A</span>
                 <small> Result: </small>
                 <span class="label label-default" id="result">
                   N/A
@@ -169,8 +181,8 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
-
-    <script src="brainfuck.js"></script>
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+    <script type="module" src="brainfuck.js"></script>
 
   </body>
 </html>

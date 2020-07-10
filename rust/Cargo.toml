@@ -1,0 +1,12 @@
+[package]
+name = "brainfuck"
+default-run = "main"
+version = "0.1.0"
+authors = ["Pablo Jorge <pablohjorge@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+num = "0.3.0"
+
+[profile.dev]
+opt-level = 3

@@ -1,3 +1,6 @@
+import init, { Interpreter as WasmInterpreter } from './pkg/wasm_brainfuck.js';
+init();
+
 var ui = new InterpreterUI(); 
 
 $(document).ready(function () {
@@ -17,10 +20,47 @@ $(document).ready(function () {
         event.preventDefault();
         ui.stop();
     });
-    $("#btn-optimize").click(function (event) {
+    $("#btn-minify").click(function (event) {
         event.preventDefault();
-        $('#program').val(optimize($('#program').val()));
+        $('#program').val(minify($('#program').val()));
     });
+
+    var programs = [
+        {name: "hello",      desc: "Hello World!"},
+        {name: "666",        desc: "Print 666"},
+        {sep: true},
+        {name: "numwarp",    desc: "Number Warper"},
+        {name: "fibonacci",  desc: "Fibonacci Sequence Generator"},
+        {name: "primes",     desc: "Prime Numbers Generator"},
+        {sep: true},
+        {name: "sierpinski", desc: "Sierpinski Triangle"},
+        {name: "mandelbrot", desc: "Mandelbrot Set Generator"},
+        {sep: true},
+        {name: "dbfi",       desc: "Brainfuck Interpreter"},
+        {name: "dbf2c",      desc: "Brainfuck to C Translator"},
+    ]
+    var programs_root = "https://raw.githubusercontent.com/pablojorge/brainfuck/master/programs/";
+
+    for (var i = 0; i < programs.length; i++) {
+        if (programs[i].sep) {
+            $("#sample-programs").append("<li role=\"separator\" class=\"divider\"></li>");
+            continue;
+        }
+        $("#sample-programs").append(
+            $("<li></li>").append(
+                $("<a href=\"#\" target=" + programs[i].name + ">" + programs[i].desc + "</a>").bind(
+                    'click',
+                    function(event) {
+                        event.preventDefault();
+                        $.get(programs_root + $(this).attr("target") + ".bf", function(data, status){
+                            $('#program').html(data);
+                        })
+                    }
+                )
+            )
+        );
+    }
+
     resizePanels();
 })
 
@@ -45,7 +85,7 @@ function resizePanels() {
     $('#output').css('height', height * .7);
 }
 
-function optimize(program) {
+function minify(program) {
     /* remove invalid ops: */
     var valid_op = function(op) {
         return '-+<>[],.'.indexOf(op) > -1;
@@ -82,6 +122,24 @@ function renderMemory(memory, current, size) {
     return ret;
 }
 
+function abbreviateNumber(number) {
+    var levels = [
+        {value: 1000000, suffix: "M"},
+        {value: 1000,    suffix: "K"},
+    ];
+
+    for (var i in levels) {
+        if(number > levels[i].value) {
+            return (
+                (number/levels[i].value).toFixed(2) +
+                levels[i].suffix
+            );
+        }
+    }
+
+    return number.toFixed(2);
+}
+
 function InterpreterUI() {
     this.interpreter = undefined;
     this.state = new UIStopped();
@@ -108,7 +166,7 @@ InterpreterUI.prototype.onStart = function() {
 
     $('#output').val('');
 
-    $("#btn-optimize").addClass('disabled');
+    $("#btn-minify").addClass('disabled');
 
     $('#cycles-count').html('0');
     $('#running-time').html("0.00 seconds");
@@ -117,7 +175,12 @@ InterpreterUI.prototype.onStart = function() {
                 .addClass('label-default');
     $('#result').html("N/A");
 
-    this.interpreter = new Interpreter(
+    var interpreter_cls = {
+        'js': Interpreter,
+        'wasm': WASMInterpreterProxy,
+    }[$('#select-engine').val()];
+
+    this.interpreter = new interpreter_cls(
         $('#program').val(), 
         $("#input").val(), 
         function() {
@@ -132,7 +195,7 @@ InterpreterUI.prototype.onStart = function() {
 InterpreterUI.prototype.onTick = function () {
     var self = this;
 
-    delta = (Date.now() - this.interpreter.start_date) / 1000;
+    var delta = (Date.now() - this.interpreter.start_date) / 1000;
 
     $('#program').get(0).setSelectionRange(this.interpreter.pc, 
                                            this.interpreter.pc+1);
@@ -155,15 +218,25 @@ InterpreterUI.prototype.onTick = function () {
     );
     $('#cycles-count').html(this.interpreter.cycles);
     $('#running-time').html(delta.toFixed(2) + " seconds");
+
+    var instPerCycle = parseInt($('#inst-per-cycle').val()),
+        cyclesPerSec = abbreviateNumber(this.interpreter.cycles/delta),
+        instPerSec = abbreviateNumber((this.interpreter.cycles*instPerCycle)/delta);
+
+    $('#speed').html(
+        cyclesPerSec + " cycles/sec (" +
+        instPerSec + " inst/sec)"
+    );
 }
 
 InterpreterUI.prototype.onFinish = function (result) {
     $('#btn-start').removeClass("disabled");
     $('#btn-start-label').html("Start");
+    $('#select-engine').attr('disabled', false);
     $('#btn-pause').addClass("disabled");
     $('#btn-step').removeClass("disabled");
     $('#btn-stop').addClass("disabled");
-    $("#btn-optimize").removeClass("disabled");
+    $("#btn-minify").removeClass("disabled");
 
     $('#result').removeClass('label-default');
     $('#result').addClass(result.error 
@@ -182,6 +255,7 @@ UIStopped.prototype.start = function() {
                          parseInt($('#cycle-delay').val()));
 
     $('#btn-start').addClass("disabled");
+    $('#select-engine').attr('disabled', true);
     $('#btn-pause').removeClass("disabled");
     $('#btn-step').addClass("disabled");
     $('#btn-stop').removeClass("disabled");
@@ -200,6 +274,7 @@ UIStopped.prototype.step = function() {
 
     $('#btn-start').removeClass("disabled");
     $('#btn-start-label').html("Resume");    
+    $('#select-engine').attr('disabled', true);
     $('#btn-pause').addClass("disabled");
     $('#btn-step').removeClass("disabled");
     $('#btn-stop').removeClass("disabled");
@@ -245,6 +320,7 @@ UIPaused.prototype.start = function () {
                          parseInt($('#cycle-delay').val()));
 
     $('#btn-start').addClass("disabled");
+    $('#select-engine').attr('disabled', true);
     $('#btn-pause').removeClass("disabled");
     $('#btn-step').addClass("disabled");
     $('#btn-stop').removeClass("disabled");
@@ -265,6 +341,71 @@ UIPaused.prototype.step = function () {
 UIPaused.prototype.stop = function () {
     ui.interpreter.stop();
     return new UIStopped();
+}
+
+////////////
+function WASMInterpreterProxy(program, input, onTick, onFinish) {
+    this.wasm_intepreter = WasmInterpreter.new(program, input, 300000);
+
+    this.program = program;
+    this.input = input;
+
+    this.onTick = onTick;
+    this.onFinish = onFinish;
+
+    this.stopRequested = false;
+    this.intervalId = undefined;
+
+    this.start_date = Date.now();
+    this.cycles = 0;
+
+    this.memory = {0: 0};
+    this.mem_ptr = 0;
+    this.mem_size = 1;    
+    this.input_ptr = 0;
+    this.pc = 0;
+    this.output = '';
+
+    this.state = new Stopped(this);
+}
+
+WASMInterpreterProxy.prototype.runCycle = function(instPerCycle) {
+    var finished = this.wasm_intepreter.tick(instPerCycle);
+
+    this.output = this.wasm_intepreter.render();
+    this.cycles += 1;
+
+    this.onTick(this);
+
+    if (finished) {
+        this.finish(new SucessResult("EOP"));
+    }
+
+    if (this.stopRequested) {
+        this.finish(new SucessResult("STOP"));
+    }
+}
+
+WASMInterpreterProxy.prototype.start = function (instPerCycle, cycleDelay) {
+    this.state = this.state.start(instPerCycle, cycleDelay);
+}
+
+WASMInterpreterProxy.prototype.pause = function () {
+    this.state = this.state.pause();
+}
+
+WASMInterpreterProxy.prototype.step = function (program, input) {
+    this.state = this.state.step(program, input) || this.state;
+}
+
+WASMInterpreterProxy.prototype.stop = function () {
+    this.state = this.state.stop();
+}
+
+WASMInterpreterProxy.prototype.finish = function (e) {
+    clearInterval(this.intervalId);
+    this.state = new Stopped(this);
+    this.onFinish(e, this);
 }
 
 ////////////
@@ -441,7 +582,6 @@ Stopped.prototype.pause = function () {
 }
 
 Stopped.prototype.step = function (program, input) {
-    this.interpreter.load(program, input);
     this.interpreter.runCycle(1);
     return new Paused(this.interpreter);
 }
@@ -493,7 +633,6 @@ Paused.prototype.paused = function () {
 }
 
 Paused.prototype.step = function (program, input) {
-    this.interpreter.load(program, input);
     this.interpreter.runCycle(1);
     return undefined;
 }
