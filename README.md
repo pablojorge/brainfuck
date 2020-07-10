@@ -1,148 +1,79 @@
-# Brainfuck Experiments
+# Brainf\*ck
 
-This project contains several interpreters for the [brainfuck language](http://www.muppetlabs.com/~breadbox/bf/). Currently, this is what's available:
+A collection of [brainfuck](http://www.muppetlabs.com/~breadbox/bf/) interpreters/translators. 
 
- * [python/brainfuck.py](python/brainfuck.py): Interpreter in Python
- * [python/brainfuck-simple.py](python/brainfuck-simple.py): Faster version of the Python interpreter
- * [python/brainfuck-rpython.py](python/brainfuck-rpython.py): RPython-compatible version of the Python interpreter
- * [python/brainfuck-rpython-jit.py](python/brainfuck-rpython-jit.py): JIT-enabled version of the Python interpreter
- * [c/brainfuck.c](c/brainfuck.c): Interpreter in C
- * [haskell/brainfuck.hs](haskell/brainfuck.hs): Interpreter in Haskell
- * [haskell/bf2c.hs](haskell/bf2c.hs): Translator from brainfuck to C in Haskell
- * [asm/brainfuck.s](asm/brainfuck.s): Interpreter in assembler for x86_64
- * [javascript/brainfuck.js](javascript/brainfuck.js): Interpreter in Javascript (live version [here](http://pablojorge.github.io/brainfuck))
- * [go/brainfuck.go](go/brainfuck.go): Interpreter in Go
- * [lua/brainfuck.lua](lua/brainfuck.lua): Interpreter in Lua
- 
-Is also includes a series of sample programs (further contributions welcome):
- * [hello.bf](programs/hello.bf): Simple hello world! program
- * [primes.bf](programs/primes.bf): Prime number generator. It prompts a number and generates all the primes from 1 up to that number.
- * [rot13.bf](programs/rot13.bf): Applies ROT13 to its input
+## Contents
+
+- [Intro](#Intro)
+- [Programs](#Programs)
+- [Languages](#Languages)
+    - [asm](#asm)
+    - [C](#C)
+    - [Golang](#Go) (contributed by [Philip K.](https://github.com/phikal))
+    - [Haskell](#Haskell)
+    - [Javascript](#Javascript)
+    - [Lua](#Lua) (contributed by [François Perrad](https://github.com/fperrad))
+    - [Python](#Python)
+    - [Rust](#Rust)
+    - [WASM](#WASM)
+- [Benchmark](#Benchmark)
+- [See also](#See_Also)
+
+## Intro
+
+This project is just really a playground to try different languages. A nice excuse to do something a bit more complex than a "hello world". New BF programs or interpreters in other languages are absolutely welcome!
+
+## Programs
+
+The `programs` directory contains a gallery of BF programs, most of them taken from other sites dedicated to BF (check [See Also](#See_Also)). Notable mentions:
+
+ * [dbf2c.bf](programs/dbf2c.bf): A Brainfuck to C translator.
+ * [dbfi.bf](programs/dbfi.bf): A Brainfuck interpreter in Brainfuck.
  * [fibonacci.bf](programs/fibonacci.bf): Fibonacci number generator.
- * [mandelbrot.bf](programs/mandelbrot.bf): Mandelbrot set generator (taken from [http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b](http://esoteric.sange.fi/brainfuck/bf-source/prog/mandelbrot.b))
- * [sierpinski.bf](programs/sierpinski.bf): Sierpinsky Triangle generator (taken from the [Spanish Wikipedia article of Brainfuck](http://es.wikipedia.org/wiki/Brainfuck))
- * [cat.bf](programs/cat.bf): Emulates the "cat" program. 
- * [cat2.bf](programs/cat2.bf): An alternative "cat" implementation. 
- * [tolower.bf](programs/tolower.bf): Prints the lower case equivalent of its input, but it's no so smart since it doesn't check for the original case or whether it's a letter or not.
- * [666.bf](programs/666.bf): Prints `666`
- * [random.bf](programs/random.bf): A pseudo random number generator
- * [wc.bf](programs/wc.bf): Word counter (like the standard Unix utility)
- * [dbfi.bf](programs/dbfi.bf): A Brainfuck interpreter in Brainfuck
- * [dbf2c.bf](programs/dbf2c.bf): A Brainfuck to C translator
- * [numwarp.bf](programs/numwarp.bf): Displays numbers from stdin vertically
- * [atoi.bf](programs/atoi.bf): Converts strings to integers
- * [bizzfuzz.bf](programs/bizzfuzz.bf): A Brainfuck implementation of the _Fizzbuzz_ challenge
+ * [mandelbrot.bf](programs/mandelbrot.bf): Mandelbrot set generator.
+ * [numwarp.bf](programs/numwarp.bf): Displays numbers from stdin vertically.
+ * [primes.bf](programs/primes.bf): Prime numbers generator.
+ * [sierpinski.bf](programs/sierpinski.bf): "Sierpinsky Triangle" generator.
 
-# System support
+## Languages
 
-All programs were tried in Ubuntu 12.04 and Mac OS X 10.8, except for the Assembler interpreter which only works with the Mac OS X assembler.
+### asm
 
-# Interpreters
+Simple interpreter written in x86_64 asm, using Mac OS syscall conventions.
 
-## Python
+Source: [asm/brainfuck.s](asm/brainfuck.s)
 
-Using the python interpreter to run the "helloworld" program found in the [Wikipedia article about Brainfuck](http://en.wikipedia.org/wiki/Brainfuck):
+    $ cd asm
+    $ make
+    as -arch x86_64 brainfuck.s -o brainfuck.o
+    ld -e _main -arch x86_64 -lc brainfuck.o -o brainfuck 
+    ld: warning: -macosx_version_min not specified, assuming 10.6
+    rm brainfuck.o
+    $ ./brainfuck ../programs/primes.bf
+    Primes up to: 50
+    2 3 5 7 11 13 17 19 23 29 31 37 41 43 47  
 
-    $ cd python
-    $ cat << EOF | python brainfuck.py 
-    > ++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>.
-    > EOF
-    Hello World!
+### C
 
-## C
+Canonical implementation, without any kind of optimization.
 
-Running the Sierpinsky Triangle generator:
+Source: [c/brainfuck.c](c/brainfuck.c)
 
     $ cd c
     $ make brainfuck
     cc brainfuck.c -o brainfuck
-    $ ./brainfuck ../programs/sierpinski.bf
-                                    *    
-                                   * *    
-                                  *   *    
-                                 * * * *    
-                                *       *    
-                               * *     * *    
-                              *   *   *   *    
-                             * * * * * * * *    
-                            *               *    
-                           * *             * *    
-                          *   *           *   *    
-                         * * * *         * * * *    
-                        *       *       *       *    
-                       * *     * *     * *     * *    
-                      *   *   *   *   *   *   *   *    
-                     * * * * * * * * * * * * * * * *    
-                    *                               *    
-                   * *                             * *    
-                  *   *                           *   *    
-                 * * * *                         * * * *    
-                *       *                       *       *    
-               * *     * *                     * *     * *    
-              *   *   *   *                   *   *   *   *    
-             * * * * * * * *                 * * * * * * * *    
-            *               *               *               *    
-           * *             * *             * *             * *    
-          *   *           *   *           *   *           *   *    
-         * * * *         * * * *         * * * *         * * * *    
-        *       *       *       *       *       *       *       *    
-       * *     * *     * *     * *     * *     * *     * *     * *    
-      *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *    
-     * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *    
+    $ ./brainfuck ../programs/hello.bf
+    Hello World!
 
-## Haskell
 
-To use the haskell interpreter:
+### Golang
 
-    $ cd haskell
-    $ runhaskell brainfuck.hs ../programs/hello.bf
-	Hello World!
-
-## Brainfuck to C translator
-
-Running the same program, but the version translated to C:
-
-    $ cd haskell
-    $ make ../programs/sierpinski.c
-	runhaskell bf2c.hs < ../programs/sierpinski.bf | indent > sierpinski.c
-    $ make sierpinski
-	cc sierpinski.c -o sierpinski
-    $ ./sierpinski
-    [...]
-
-## Assembler
-
-Running the primes generator with the assembler interpreter:
-
-    $ cd asm
-    $ make
-	as -arch x86_64 brainfuck.s -o brainfuck.o
-	ld -e _main -arch x86_64 -lc brainfuck.o -o brainfuck 
-	ld: warning: -macosx_version_min not specified, assuming 10.6
-	rm brainfuck.o
-	$ ./brainfuck ../programs/primes.bf
-	Primes up to: 50
-	2 3 5 7 11 13 17 19 23 29 31 37 41 43 47  
-
-## Javascript
-
-There's a live version of the Javascript interpreter at [http://pablojorge.github.io/brainfuck](http://pablojorge.github.io/brainfuck)
-
-It features a debugger-like interface, with support for:
- * Memory inspection
- * Step-by-step execution
- * Modification of program AND input between steps
- * Configurable speed (operations/instructions per cycle, and delay between cycles)
-
-## Golang
-
-(contributed by [Philip K.](https://github.com/phikal))
+Source: [go/brainfuck.go](go/brainfuck.go)
 
 Running the number warper with the go interpreter:
 
     $ cd go
-    $ go build -o brainfuck
-    $ ./brainfuck ../programs/numwarp.bf
+    $ GOPATH=$PWD go run brainfuck.go ../programs/numwarp.bf
     32
       /\
        / 
@@ -150,145 +81,96 @@ Running the number warper with the go interpreter:
      /\
       /
 
-## Lua
+### Haskell
 
-(contributed by [François Perrad](https://github.com/fperrad))
+Interpreter source: [haskell/brainfuck.hs](haskell/brainfuck.hs)
+Translator to C: [haskell/bf2c.hs](haskell/bf2c.hs)
 
-To use the [Lua](http://www.lua.org/) interpreter:
+To run the interpreter:
+
+    $ cd haskell
+    $ runhaskell brainfuck.hs ../programs/hello.bf
+    Hello World!
+
+To translate any BF program to C:
+
+    $ cd haskell
+    $ make ../programs/sierpinski.c
+    runhaskell bf2c.hs < ../programs/sierpinski.bf | indent > sierpinski.c
+    $ make sierpinski
+    cc sierpinski.c -o sierpinski
+    $ ./sierpinski
+    [...]
+
+### Javascript
+
+Source: [javascript/brainfuck.js](javascript/brainfuck.js)
+
+Simple debugger-like UI, using Bootstrap and jQuery (yes, I'm old school) with support for:
+
+  * Memory inspection
+  * Step-by-step execution
+  * Configurable speed (instructions per cycle/delay between cycles)
+  * Gallery of sample programs, loaded on the fly
+  * Choice of pure JS or [WASM](#WASM) engine
+
+![JS UI Screenshot](./javascript/screenshot.png)
+
+The JS version can run in stand-alone mode, but to enable the WASM engine a minimal HTTP server is needed. In the `./javascript` directory, run:
+
+```
+$ cd javascript
+$ python -m SimpleHTTPServer
+Serving HTTP on 0.0.0.0 port 8000 ...
+```
+
+Then connect to <http://localhost:8000>
+
+Alternatively, use the online version available at <http://pablojorge.github.io/brainfuck>.
+
+### Lua
+
+Interpreter source: [lua/brainfuck.lua](lua/brainfuck.lua)
+Translator source: [lua/bf2lua.lua](lua/bf2lua.lua)
+
+The interpreter is compatible with Lua 5.1, 5.2 and 5.3, and runs with [LuaJIT](http://luajit.org/). To run it:
 
     $ cd lua
     $ lua brainfuck.lua ../programs/hello.bf
-	Hello World!
-
-This interpreter is compatible with Lua 5.1, 5.2 and 5.3 languages,
-and runs fast with [LuaJIT](http://luajit.org/).
-
-## Brainfuck to Lua translator
+    Hello World!
 
 Running the same program, but the version translated to Lua:
 
     $ cd lua
     $ lua bf2lua.lua ../programs/hello.bf | lua -
-	Hello World!
+    Hello World!
 
-# Benchmarks
+### Python
 
-A good program to use as benchmark is the Mandelbrot set generator.
+Original, unoptimized, verbose interpreter: [python/brainfuck.py](python/brainfuck.py).
+Optimized (no method lookups, pre-computed jumps over minified source):  [python/brainfuck-simple.py](python/brainfuck-simple.py).
+Slightly modified version of the optimized interpreter so it can be translated to C, using RPython: [python/brainfuck-rpython.py](python/brainfuck-rpython.py)
+JIT-enabled version: [python/brainfuck-rpython-jit.py](python/brainfuck-rpython-jit.py)
 
-First, with the python interpreter:
+Using the plain python interpreter to run a "helloworld" program:
 
-    $ time python brainfuck.py ../programs/mandelbrot.bf
-    AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDEGFFEEEEDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-    AAAAAAAAAAAAAAABBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDEEEFGIIGFFEEEDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBB
-    AAAAAAAAAAAAABBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDEEEEFFFI KHGGGHGEDDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBB
-    AAAAAAAAAAAABBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDEEEEEFFGHIMTKLZOGFEEDDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBB
-    AAAAAAAAAAABBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDEEEEEEFGGHHIKPPKIHGFFEEEDDDDDDDDDCCCCCCCCCCBBBBBBBBBBBBBBBBBB
-    AAAAAAAAAABBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDEEEEEEFFGHIJKS  X KHHGFEEEEEDDDDDDDDDCCCCCCCCCCBBBBBBBBBBBBBBBB
-    AAAAAAAAABBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDEEEEEEFFGQPUVOTY   ZQL[MHFEEEEEEEDDDDDDDCCCCCCCCCCCBBBBBBBBBBBBBB
-    AAAAAAAABBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDEEEEEFFFFFGGHJLZ         UKHGFFEEEEEEEEDDDDDCCCCCCCCCCCCBBBBBBBBBBBB
-    AAAAAAABBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDEEEEFFFFFFGGGGHIKP           KHHGGFFFFEEEEEEDDDDDCCCCCCCCCCCBBBBBBBBBBB
-    AAAAAAABBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDEEEEEFGGHIIHHHHHIIIJKMR        VMKJIHHHGFFFFFFGSGEDDDDCCCCCCCCCCCCBBBBBBBBB
-    AAAAAABBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDEEEEEEFFGHK   MKJIJO  N R  X      YUSR PLV LHHHGGHIOJGFEDDDCCCCCCCCCCCCBBBBBBBB
-    AAAAABBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDEEEEEEEEEFFFFGH O    TN S                       NKJKR LLQMNHEEDDDCCCCCCCCCCCCBBBBBBB
-    AAAAABBCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDEEEEEEEEEEEEFFFFFGHHIN                                 Q     UMWGEEEDDDCCCCCCCCCCCCBBBBBB
-    AAAABBCCCCCCCCCCCCCCCCCCCCCCCCCDDDDEEEEEEEEEEEEEEEFFFFFFGHIJKLOT                                     [JGFFEEEDDCCCCCCCCCCCCCBBBBB
-    AAAABCCCCCCCCCCCCCCCCCCCCCCDDDDEEEEEEEEEEEEEEEEFFFFFFGGHYV RQU                                     QMJHGGFEEEDDDCCCCCCCCCCCCCBBBB
-    AAABCCCCCCCCCCCCCCCCCDDDDDDDEEFJIHFFFFFFFFFFFFFFGGGGGGHIJN                                            JHHGFEEDDDDCCCCCCCCCCCCCBBB
-    AAABCCCCCCCCCCCDDDDDDDDDDEEEEFFHLKHHGGGGHHMJHGGGGGGHHHIKRR                                           UQ L HFEDDDDCCCCCCCCCCCCCCBB
-    AABCCCCCCCCDDDDDDDDDDDEEEEEEFFFHKQMRKNJIJLVS JJKIIIIIIJLR                                               YNHFEDDDDDCCCCCCCCCCCCCBB
-    AABCCCCCDDDDDDDDDDDDEEEEEEEFFGGHIJKOU  O O   PR LLJJJKL                                                OIHFFEDDDDDCCCCCCCCCCCCCCB
-    AACCCDDDDDDDDDDDDDEEEEEEEEEFGGGHIJMR              RMLMN                                                 NTFEEDDDDDDCCCCCCCCCCCCCB
-    AACCDDDDDDDDDDDDEEEEEEEEEFGGGHHKONSZ                QPR                                                NJGFEEDDDDDDCCCCCCCCCCCCCC
-    ABCDDDDDDDDDDDEEEEEFFFFFGIPJIIJKMQ                   VX                                                 HFFEEDDDDDDCCCCCCCCCCCCCC
-    ACDDDDDDDDDDEFFFFFFFGGGGHIKZOOPPS                                                                      HGFEEEDDDDDDCCCCCCCCCCCCCC
-    ADEEEEFFFGHIGGGGGGHHHHIJJLNY                                                                        TJHGFFEEEDDDDDDDCCCCCCCCCCCCC
-    A                                                                                                 PLJHGGFFEEEDDDDDDDCCCCCCCCCCCCC
-    ADEEEEFFFGHIGGGGGGHHHHIJJLNY                                                                        TJHGFFEEEDDDDDDDCCCCCCCCCCCCC
-    ACDDDDDDDDDDEFFFFFFFGGGGHIKZOOPPS                                                                      HGFEEEDDDDDDCCCCCCCCCCCCCC
-    ABCDDDDDDDDDDDEEEEEFFFFFGIPJIIJKMQ                   VX                                                 HFFEEDDDDDDCCCCCCCCCCCCCC
-    AACCDDDDDDDDDDDDEEEEEEEEEFGGGHHKONSZ                QPR                                                NJGFEEDDDDDDCCCCCCCCCCCCCC
-    AACCCDDDDDDDDDDDDDEEEEEEEEEFGGGHIJMR              RMLMN                                                 NTFEEDDDDDDCCCCCCCCCCCCCB
-    AABCCCCCDDDDDDDDDDDDEEEEEEEFFGGHIJKOU  O O   PR LLJJJKL                                                OIHFFEDDDDDCCCCCCCCCCCCCCB
-    AABCCCCCCCCDDDDDDDDDDDEEEEEEFFFHKQMRKNJIJLVS JJKIIIIIIJLR                                               YNHFEDDDDDCCCCCCCCCCCCCBB
-    AAABCCCCCCCCCCCDDDDDDDDDDEEEEFFHLKHHGGGGHHMJHGGGGGGHHHIKRR                                           UQ L HFEDDDDCCCCCCCCCCCCCCBB
-    AAABCCCCCCCCCCCCCCCCCDDDDDDDEEFJIHFFFFFFFFFFFFFFGGGGGGHIJN                                            JHHGFEEDDDDCCCCCCCCCCCCCBBB
-    AAAABCCCCCCCCCCCCCCCCCCCCCCDDDDEEEEEEEEEEEEEEEEFFFFFFGGHYV RQU                                     QMJHGGFEEEDDDCCCCCCCCCCCCCBBBB
-    AAAABBCCCCCCCCCCCCCCCCCCCCCCCCCDDDDEEEEEEEEEEEEEEEFFFFFFGHIJKLOT                                     [JGFFEEEDDCCCCCCCCCCCCCBBBBB
-    AAAAABBCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDEEEEEEEEEEEEFFFFFGHHIN                                 Q     UMWGEEEDDDCCCCCCCCCCCCBBBBBB
-    AAAAABBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDEEEEEEEEEFFFFGH O    TN S                       NKJKR LLQMNHEEDDDCCCCCCCCCCCCBBBBBBB
-    AAAAAABBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDEEEEEEFFGHK   MKJIJO  N R  X      YUSR PLV LHHHGGHIOJGFEDDDCCCCCCCCCCCCBBBBBBBB
-    AAAAAAABBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDEEEEEFGGHIIHHHHHIIIJKMR        VMKJIHHHGFFFFFFGSGEDDDDCCCCCCCCCCCCBBBBBBBBB
-    AAAAAAABBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDEEEEFFFFFFGGGGHIKP           KHHGGFFFFEEEEEEDDDDDCCCCCCCCCCCBBBBBBBBBBB
-    AAAAAAAABBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDEEEEEFFFFFGGHJLZ         UKHGFFEEEEEEEEDDDDDCCCCCCCCCCCCBBBBBBBBBBBB
-    AAAAAAAAABBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDEEEEEEFFGQPUVOTY   ZQL[MHFEEEEEEEDDDDDDDCCCCCCCCCCCBBBBBBBBBBBBBB
-    AAAAAAAAAABBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDEEEEEEFFGHIJKS  X KHHGFEEEEEDDDDDDDDDCCCCCCCCCCBBBBBBBBBBBBBBBB
-    AAAAAAAAAAABBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDEEEEEEFGGHHIKPPKIHGFFEEEDDDDDDDDDCCCCCCCCCCBBBBBBBBBBBBBBBBBB
-    AAAAAAAAAAAABBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDEEEEEFFGHIMTKLZOGFEEDDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBB
-    AAAAAAAAAAAAABBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDDDEEEEFFFI KHGGGHGEDDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBB
-    AAAAAAAAAAAAAAABBBBBBBBBBBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCDDDDDDDDDDEEEFGIIGFFEEEDDDDDDDDCCCCCCCCCBBBBBBBBBBBBBBBBBBBBBBBBBB
+    $ cd python
+    $ cat << EOF | python brainfuck.py 
+    > ++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>.
+    > EOF
+    Hello World!
 
-    real    992m9.836s
-    user    991m45.631s
-    sys 0m3.060s
-
-It took 992 minutes (16hs 32 min). Not very fast...
-
-Now with the C interpreter:
-
-    $ time ./brainfuck ../programs/mandelbrot.bf
-    [...]
-    real    1m50.316s
-    user    1m50.251s
-    sys 0m0.024s
-
-1m50s! Way faster than running with the Python interpreter.
-
-3rd try: the translated to C version without optimizations:
-
-    $ runhaskell bf2c.hs < ../programs/mandelbrot.bf > mandelbrot.c
-    $ cc mandelbrot.c -o mandelbrot
-    $ time ./mandelbrot
-    [...]
-    real    0m18.084s
-    user    0m18.033s
-    sys 0m0.032s
-
-An improvement, but not as impressive as in the first case.
-
-Finally the same C version, but compiled with optimizations:
-
-    $ cc -O3 mandelbrot.c -o mandelbrot
-    $ time ./mandelbrot
-    [...]
-    real    0m1.111s
-    user    0m1.092s
-    sys 0m0.004s
-
-Now THAT's fast.
-
-## Improvements in the Python version
-
-The original Python interpreter is excessively complex, but it can be easily improved to run faster in several ways:
-
- * Avoiding methods lookup
- * Pre-computing jumps between brackets
- * Avoiding looping over non-operands
- * Avoiding array lookups
-
-There's a separate version, brainfuck-simple.py that contains those improvements. Another version, brainfuck-rpython.py, is the same thing but slightly modified so it can be translated using RPython:
+To use the RPython version: 
 
     $ cd <pypy-source>
     $ python rpython/translator/goal/translate.py ~/Projects/github/brainfuck/python/brainfuck-rpython.py
-
-Running time:
-
     $ time ./brainfuck-rpython-c ~/Projects/github/brainfuck/programs/mandelbrot.bf
     [...]
     real  0m29.978s
     user  0m29.796s
     sys  0m0.110s
 
-This can be optimized even further. As suggested by [Gsam](https://github.com/GSam), and taking hints from [this post](https://morepypy.blogspot.com.ar/2011/04/tutorial-part-2-adding-jit.html), if we explicitly add support for PyPy's JIT, the gain is really big:
+To use the JIT-enabled version (thanks [Gsam](https://github.com/GSam) for the suggestion):
 
     $ python rpython/translator/goal/translate.py --opt=jit ~/Projects/github/brainfuck/python/brainfuck-rpython-jit.py
     $ time ./brainfuck-rpython-jit-c ~/Projects/github/brainfuck/programs/mandelbrot.bf
@@ -297,26 +179,101 @@ This can be optimized even further. As suggested by [Gsam](https://github.com/GS
     user  0m4.867s
     sys  0m0.043s
 
-## Comparison table
+### Rust
 
-This is the full comparison between all versions:
+Interpreter source: [rust/src/lib.rs](rust/src/lib.rs). Includes some slightly improved optimizations, like compressing identical contiguous operations.
+Translator source: [rust/src/bin/translate.rs](rust/src/bin/translate.rs). Supports translating to Rust and C.
 
-| | Sierpinski | Mandelbrot | Primes up to 100 | 
-| ---: | :---: | :---: | :---: |
-| Non-optimized python version (CPython) | 0m5.387s | 991m45.631s | 19m34.163s |
-| Non-optimized python version (PyPy) | 0m0.470s | 24m59.928s | 0m28.210s |
-| Simplified python version (CPython) | 0m0.125s | 67m39.287s | 1m16.431s |
-| Simplified python version (PyPy) | 0m0.246s | 1m35.345s | 0m2.144s |
-| Improved python version (RPython) | 0m0.003s | 0m29.796s | 0m0.486s |
-| JIT-enabled version (RPython-JIT) | 0m0.008s | 0m4.867s | 0m0.107s |
-| Assembler | 0m0.015s | 1m7.288s | 0m1.501s |
-| C Interpreter (-O0) | 0m0.014s | 2m7.036s | 0m2.012s |
-| C Interpreter (-O1) | 0m0.009s | 1m7.504s | 0m1.005s |
-| Translated to C (-O0) | 0m0.002s | 0m19.674s | 0m0.243s |
-| Translated to C (-O1) | 0m0.001s | 0m1.360s | 0m0.012s |
+To run the interpreter:
 
-Notice the impressive difference between CPython and PyPy. In both cases, running the same code is 40 times slower in CPython. This means you can have a really big gain for "free" (almost), by just using the PyPy interpreter.
+```
+$ cd rust
+$ cargo run ../programs/primes.bf
+    Finished dev [optimized + debuginfo] target(s) in 0.01s
+     Running `target/debug/main ../programs/primes.bf`
+Primes up to: 50
+2 3 5 7 11 13 17 19 23 29 31 37 41 43 47
+```
 
-Adapting the source to RPython is not free of course, and the gain is not as big, BUT if we explictly add support for the JIT, the gain makes it totally worthy. In fact the gain of this version compared with running the simplified version (unmodified) with PyPy, is comparable to the gain obtained by running the unmodified version with PyPy vs running it with CPython.
+To translate to Rust:
 
-In the other cases, the performance differences are totally expected (C interpreter compiled with optimisations has an equivalent performance to the assembler interpreter, the translated to C version is almost two orders of magnitude faster than the interpreted version, etc.). It's also worth highlighting the fact that the JIT-enabled Python version runs _faster_ than the translated-to-C version (compiled without optimizations).
+```
+$ ./translate.sh ../programs/mandelbrot.bf rs
+    Finished dev [optimized + debuginfo] target(s) in 0.02s
+     Running `target/debug/translate rs`
+   Compiling brainfuck v0.1.0 (/Users/pablo/Projects/github/pablojorge/brainfuck/rust)
+    Finished dev [optimized + debuginfo] target(s) in 0.38s
+
+real	0m0.419s
+user	0m0.299s
+sys	0m0.134s
+    Finished dev [optimized + debuginfo] target(s) in 0.01s
+     Running `target/debug/mandelbrot`
+[...]
+
+real	0m2.049s
+user	0m1.976s
+sys	0m0.047s
+```
+
+And to C:
+
+```
+$ ./translate.sh ../programs/mandelbrot.bf c
+    Finished dev [optimized + debuginfo] target(s) in 0.02s
+     Running `target/debug/translate c`
+cc -O1 mandelbrot.c -o mandelbrot
+
+real	0m1.603s
+user	0m1.448s
+sys	0m0.114s
+[...]
+
+real	0m1.006s
+user	0m0.985s
+sys	0m0.009s
+```
+
+### WASM
+
+Rust interpreter, prepared to be compiled to WASM: [wasm/src/lib.rs](wasm/src/lib.rs)
+
+To generate the WASM binary and JS glue:
+
+    $ cd rust
+    $ wasm-pack build --target web
+
+That will generate the target libs in `./pkg`. To try in the browser:
+
+    $ python -m SimpleHTTPServer
+
+And then connect to <http://localhost:8000>. Modify the `program` and `input` vars in `index.html` to try other programs.
+
+## Benchmark
+
+|                                        | Mandelbrot  | Primes up to 100 |
+|                                   ---: | :---:       | :---:            |
+| Non-optimized python version (CPython) | 991m45.631s | 19m34.163s       |
+|    Non-optimized python version (PyPy) | 24m59.928s  | 0m28.210s        |
+|    Simplified python version (CPython) | 67m39.287s  | 1m16.431s        |
+|       Simplified python version (PyPy) | 1m35.345s   | 0m2.144s         |
+|      Improved python version (RPython) | 0m29.796s   | 0m0.486s         |
+|      JIT-enabled version (RPython-JIT) | 0m4.867s    | 0m0.107s         |
+|                              Assembler | 1m7.288s    | 0m1.501s         |
+|                    C Interpreter (-O0) | 2m7.036s    | 0m2.012s         |
+|                    C Interpreter (-O1) | 1m7.504s    | 0m1.005s         |
+|                  Translated to C (-O0) | 0m19.674s   | 0m0.243s         |
+|                  Translated to C (-O1) | 0m1.360s    | 0m0.012s         |
+
+Notes:
+
+  * The same code is 40 times slower in CPython vs in PyPy. You can have a really big gain for "free" (almost), by just using the PyPy interpreter.
+  * Adapting the source to RPython is not free of course, and the gain is not as big, BUT if we explictly add support for the JIT, the gain makes it totally worthy. In fact the gain of this version compared with running the simplified version (unmodified) with PyPy, is comparable to the gain obtained by running the unmodified version with PyPy vs running it with CPython.
+  * The other performance differences are totally expected (C interpreter compiled with optimisations has an equivalent performance to the assembler interpreter, the translated to C version is almost two orders of magnitude faster than the interpreted version, etc.).
+  * The JIT-enabled Python version runs _faster_ than the translated-to-C version (compiled without optimizations).
+
+## See Also
+
+  * <http://en.wikipedia.org/wiki/Brainfuck>
+  * <http://esoteric.sange.fi/brainfuck/bf-source/prog/>
+  * [El Brainfuck](http://copy.sh/brainfuck/) by Fabian Hemmer (<http://copy.sh/>)
