@@ -83,11 +83,12 @@ std::ostream& operator<<(std::ostream& os, const Operation& op)
 
 class Expression
 {
-public:
+private:
     Operation op_;
     int arg_;
     std::vector<Expression> children_;
 
+public:
     Expression(Operation op,
                std::vector<Expression> &&children)
      : op_(op),
@@ -107,6 +108,17 @@ public:
        children_(std::move(other.children_)) {}
 
     ~Expression() = default;
+
+    inline bool operator == (const Expression& other) const {
+        return op_ == other.op_;
+    }
+
+    inline                     Operation operation() const {return op_;}
+    inline                            int argument() const {return arg_;}
+    inline       std::vector<Expression>& children()       {return children_;}
+    inline const std::vector<Expression>& children() const {return children_;}
+
+    friend std::ostream& operator<<(std::ostream& os, const Expression& exp);
 };
 
 std::ostream& operator<<(std::ostream& os, const Expression& exp)
@@ -179,17 +191,17 @@ ExpressionVector optimize(ExpressionVector& expressions) {
             optimized.push_back(std::move(expression));
             continue;
         }
-        switch(expression.op_) {
+        switch(expression.operation()) {
             case Operation::Inc:
             case Operation::Dec:
             case Operation::Fwd:
             case Operation::Bwd:
-                if (expression.op_==optimized.back().op_) {
-                    auto arg_ = optimized.back().arg_;
+                if (expression == optimized.back()) {
+                    auto arg = optimized.back().argument();
                     optimized.pop_back();
                     optimized.push_back(Expression(
-                        expression.op_,
-                        arg_ + 1
+                        expression.operation(),
+                        arg + 1
                     ));
                 } else {
                     optimized.push_back(std::move(expression));
@@ -198,7 +210,7 @@ ExpressionVector optimize(ExpressionVector& expressions) {
             case Operation::Loop:
                 optimized.push_back(Expression(
                     Operation::Loop,
-                    optimize(expression.children_)
+                    optimize(expression.children())
                 ));
                 break;
             default:
@@ -234,11 +246,11 @@ public:
 
 void do_run(const ExpressionVector& expressions, Memory &memory) {
     for(const auto &expression: expressions) {
-        switch(expression.op_) {
-            case Operation::Inc: memory.inc(expression.arg_); break;
-            case Operation::Dec: memory.dec(expression.arg_); break;
-            case Operation::Fwd: memory.fwd(expression.arg_); break;
-            case Operation::Bwd: memory.bwd(expression.arg_); break;
+        switch(expression.operation()) {
+            case Operation::Inc: memory.inc(expression.argument()); break;
+            case Operation::Dec: memory.dec(expression.argument()); break;
+            case Operation::Fwd: memory.fwd(expression.argument()); break;
+            case Operation::Bwd: memory.bwd(expression.argument()); break;
             case Operation::Input:
                 memory.write(getchar());
                 if (memory.read() == EOF)
@@ -250,7 +262,7 @@ void do_run(const ExpressionVector& expressions, Memory &memory) {
                 break;
             case Operation::Loop:
                 while(memory.read() > 0) {
-                    do_run(expression.children_, memory);
+                    do_run(expression.children(), memory);
                 }
                 break;
         }
