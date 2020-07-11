@@ -1,9 +1,13 @@
 ALL = brainfuck
 
+# CXX = g++-10
+CXX = c++
+CXXFLAGS = -std=c++17 -g -O3
+
 all: $(ALL)
 
 %: %.cpp
-	$(CXX) -std=c++17 -g -O3 $< -o $@
+	$(CXX) $(CXXFLAGS) $< -o $@
 
 dis:
 	objdump -dSC ./brainfuck
