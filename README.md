@@ -56,7 +56,7 @@ Source: [asm/brainfuck.s](asm/brainfuck.s)
 
 ### C
 
-Canonical implementation, without any kind of optimization.
+Simple implementation, with precalculated jumps.
 
 Source: [c/brainfuck.c](c/brainfuck.c)
 
@@ -69,7 +69,7 @@ Source: [c/brainfuck.c](c/brainfuck.c)
 
 ### C++
 
-C++ version, with improved optimizations (compressed contiguous identical expressions).
+C++ version, with improved optimizations (expression tree with compressed contiguous identical operations).
 
 Tested with Clang 11.0.3 and GCC 10.1.0.
 
@@ -77,7 +77,7 @@ Source: [cpp/brainfuck.cpp](cpp/brainfuck.cpp)
 
     $ cd cpp
     $ make brainfuck
-    g++-10 -std=c++17 -g -O3 brainfuck.cpp -o brainfuck
+    c++ -std=c++14 -g -O3 brainfuck.cpp -o brainfuck
     $ ./brainfuck ../programs/hello.bf
     Hello World!
 
@@ -96,6 +96,8 @@ Running the number warper with the go interpreter:
     /\ \/
      /\
       /
+
+Thanks [Philip K.](https://github.com/phikal) for the contribution!
 
 ### Haskell
 
@@ -163,11 +165,13 @@ Running the same program, but the version translated to Lua:
     $ lua bf2lua.lua ../programs/hello.bf | lua -
     Hello World!
 
+Thanks [François Perrad](https://github.com/fperrad) for the contribution!
+
 ### Python
 
 Original, unoptimized, verbose interpreter: [python/brainfuck.py](python/brainfuck.py).
 
-Optimized (no method lookups, pre-computed jumps over minified source):  [python/brainfuck-simple.py](python/brainfuck-simple.py).
+Optimized (no method lookups, pre-computed jumps over minified source): [python/brainfuck-simple.py](python/brainfuck-simple.py).
 
 Slightly modified version of the optimized interpreter so it can be translated to C, using RPython: [python/brainfuck-rpython.py](python/brainfuck-rpython.py)
 
@@ -191,7 +195,7 @@ To use the RPython version:
     user  0m29.796s
     sys  0m0.110s
 
-To use the JIT-enabled version (thanks [Gsam](https://github.com/GSam) for the suggestion):
+To use the JIT-enabled version: (thanks [Gsam](https://github.com/GSam) for the suggestion)
 
     $ python rpython/translator/goal/translate.py --opt=jit ~/Projects/github/brainfuck/python/brainfuck-rpython-jit.py
     $ time ./brainfuck-rpython-jit-c ~/Projects/github/brainfuck/programs/mandelbrot.bf
@@ -202,7 +206,7 @@ To use the JIT-enabled version (thanks [Gsam](https://github.com/GSam) for the s
 
 ### Rust
 
-Interpreter source: [rust/src/lib.rs](rust/src/lib.rs). Includes some slightly improved optimizations, like compressing identical contiguous operations.
+Interpreter source: [rust/src/lib.rs](rust/src/lib.rs). Includes improved optimizations, like compressing identical contiguous operations.
 
 Translator source: [rust/src/bin/translate.rs](rust/src/bin/translate.rs). Supports translating to Rust and C.
 

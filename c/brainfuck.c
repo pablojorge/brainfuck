@@ -6,18 +6,66 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+enum direction {
+    FWD,
+    BWD
+};
+
+char* find_match(char *src, char match, enum direction dir) {
+    char *aux = src;
+    int count = 1;
+
+    while (count) {
+        dir == FWD ? ++aux : --aux;
+        if (*aux == *src) ++count;
+        if (*aux == match) --count;
+    }
+
+    return aux;
+}
+
+void prepare_jumps(char *program, ssize_t prg_size, char *jump_map[]) {
+    char *aux = program;
+
+    while (aux < (program + prg_size)) {
+        switch(*aux) {
+            case '[':
+                jump_map[aux-program] = find_match(aux, ']', FWD);
+                break;
+            case ']':
+                jump_map[aux-program] = find_match(aux, '[', BWD);
+                break;
+        }
+        ++aux;
+    }
+}
+
+ssize_t read_prg(char *buf, ssize_t buf_size, int fd) {
+    char *aux_ptr = buf;
+    ssize_t prg_size = 0,
+            aux_size = buf_size;
+
+    ssize_t ret = read(fd, aux_ptr, aux_size);
+
+    while (ret && (prg_size < buf_size)) {
+        aux_size -= ret;
+        prg_size += ret;
+        aux_ptr += ret;
+        ret = read(fd, aux_ptr, aux_size);
+    }
+
+    return prg_size;
+}
+
 int main(int argc, char *argv[])
 {
     char program[50000],
          memory[30000];
+    char *jump_map[50000];
     char *ip = program,
-         *ptr = memory,
-         *aux_ptr = NULL;
+         *ptr = memory;
     int fd = 0;
-    ssize_t prg_size = 0,
-            aux_size = 0,
-            ret = 0;
-    int count = 0;
+    ssize_t prg_size = 0;
 
     if (argc < 2) {
         fd = STDIN_FILENO;
@@ -31,16 +79,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    aux_size = sizeof(program);
-    aux_ptr = program;
-    ret = read(fd, aux_ptr, aux_size);
+    prg_size = read_prg(program, sizeof(program), fd);
 
-    while (ret && (prg_size < sizeof(program))) {
-        aux_size -= ret;
-        prg_size += ret;
-        aux_ptr += ret;
-        ret = read(fd, aux_ptr, aux_size);
-    }
+    prepare_jumps(program, prg_size, jump_map);
 
     while (ip < (program + prg_size)) {
         switch(*ip) {
@@ -56,22 +97,12 @@ int main(int argc, char *argv[])
                       break;
             case '[':
                 if (!*ptr) {
-                    count = 1;
-                    while (count) {
-                        ++ip;
-                        if (*ip == '[') ++count;
-                        if (*ip == ']') --count;
-                    }
+                    ip = jump_map[ip-program];
                 }
                 break;
             case ']':
                 if (*ptr) {
-                    count = 1;
-                    while (count) {
-                        --ip;
-                        if (*ip == ']') ++count;
-                        if (*ip == '[') --count;
-                    }
+                    ip = jump_map[ip-program];
                 }
                 break;
         }
