@@ -89,38 +89,41 @@ public:
     std::vector<Expression> children_;
 
     Expression(Operation op,
-               int arg,
-               const std::vector<Expression> &children)
+               std::vector<Expression> &&children)
      : op_(op),
-       arg_(arg),
-       children_(children) {}
+       arg_(0),
+       children_(std::move(children)) {}
 
-    Expression(Operation op)
+    Expression(Operation op, int arg_=1)
      : op_(op),
-       arg_(1),
+       arg_(arg_),
        children_() {}
 
-    // Expression(const Expression&) = delete;
+    Expression(const Expression&) = delete;
+
+    Expression(Expression&& other)
+     : op_(other.op_),
+       arg_(other.arg_),
+       children_(std::move(other.children_)) {}
 
     ~Expression() = default;
 };
 
 std::ostream& operator<<(std::ostream& os, const Expression& exp)
 {
-    os << "Exp(op: " << exp.op_
-       << ", arg: " << exp.arg_ 
-       << ", children: " << exp.children_
+    os << "E(" << exp.op_ << "(" << exp.arg_
+       << ")->" << exp.children_
        << ")";
     return os;
 }
 
 using ExpressionVector = std::vector<Expression>;
 
-std::tuple<ExpressionVector, TokenVector::iterator>
+std::tuple<ExpressionVector,
+           TokenVector::iterator>
 do_parse(TokenVector::iterator begin,
          TokenVector::iterator end) {
     ExpressionVector expressions;
-    std::tuple<ExpressionVector, TokenVector::iterator> ret;
 
     auto push_unit_op = [&](Operation op) {
         expressions.push_back(Expression(op));
@@ -146,14 +149,14 @@ do_parse(TokenVector::iterator begin,
             case Token::Output:
                 push_unit_op(Operation::Output);
                 break;
-            case Token::LoopStart:
-                ret = do_parse(begin+1, end);
-                expressions.push_back(Expression(
-                    Operation::Loop,
-                    0,
-                    std::get<0>(ret)
-                ));
-                begin = std::get<1>(ret);
+            case Token::LoopStart: {
+                    auto &&ret = do_parse(begin+1, end);
+                    expressions.push_back(Expression(
+                        Operation::Loop,
+                        std::move(std::get<0>(ret))
+                    ));
+                    begin = std::get<1>(ret);
+                }
                 break;
             case Token::LoopEnd:
                 return std::make_tuple(std::move(expressions), begin);
@@ -164,10 +167,48 @@ do_parse(TokenVector::iterator begin,
     return std::make_tuple(std::move(expressions), begin);
 }
 
-ExpressionVector parse(TokenVector::iterator begin, TokenVector::iterator end) {
+auto parse(TokenVector::iterator begin, TokenVector::iterator end) {
     return std::get<0>(do_parse(begin, end));
 }
 
+ExpressionVector optimize(ExpressionVector& expressions) {
+    ExpressionVector optimized;
+
+    for(auto &&expression: expressions) {
+        if(optimized.begin()==optimized.end()) {
+            optimized.push_back(std::move(expression));
+            continue;
+        }
+        switch(expression.op_) {
+            case Operation::Inc:
+            case Operation::Dec:
+            case Operation::Fwd:
+            case Operation::Bwd:
+                if (expression.op_==optimized.back().op_) {
+                    auto arg_ = optimized.back().arg_;
+                    optimized.pop_back();
+                    optimized.push_back(Expression(
+                        expression.op_,
+                        arg_ + 1
+                    ));
+                } else {
+                    optimized.push_back(std::move(expression));
+                }
+                break;
+            case Operation::Loop:
+                optimized.push_back(Expression(
+                    Operation::Loop,
+                    optimize(expression.children_)
+                ));
+                break;
+            default:
+                optimized.push_back(std::move(expression));
+                break;
+        }
+    }
+
+    return optimized;
+}
 
 class Memory
 {
@@ -178,10 +219,11 @@ public:
     Memory() : memory_(), ptr_(memory_.begin()) {}
     ~Memory() = default;
 
-    inline void inc()  {++(*this->ptr_);}
-    inline void dec()  {--(*this->ptr_);}
-    inline void fwd()  {  ++this->ptr_; }
-    inline void bwd()  {  --this->ptr_; }
+    inline void inc(int offset) { *this->ptr_ += offset; }
+    inline void dec(int offset) { *this->ptr_ -= offset; }
+    inline void fwd(int offset) {  this->ptr_ += offset; }
+    inline void bwd(int offset) {  this->ptr_ -= offset; }
+
     inline char read() {
         return *this->ptr_;
     }
@@ -193,13 +235,14 @@ public:
 void do_run(const ExpressionVector& expressions, Memory &memory) {
     for(const auto &expression: expressions) {
         switch(expression.op_) {
-            case Operation::Inc: memory.inc(); break;
-            case Operation::Dec: memory.dec(); break;
-            case Operation::Fwd: memory.fwd(); break;
-            case Operation::Bwd: memory.bwd(); break;
+            case Operation::Inc: memory.inc(expression.arg_); break;
+            case Operation::Dec: memory.dec(expression.arg_); break;
+            case Operation::Fwd: memory.fwd(expression.arg_); break;
+            case Operation::Bwd: memory.bwd(expression.arg_); break;
             case Operation::Input:
                 memory.write(getchar());
-                if (memory.read() == EOF) exit(0);
+                if (memory.read() == EOF)
+                    exit(0);
                 break;
             case Operation::Output:
                 putchar(memory.read()); 
@@ -249,10 +292,14 @@ int main(int argc, char *argv[]) {
 
     auto tokens = tokenize(program);
     // std::cout << "tokens: " << tokens << std::endl;
+
     auto expressions = parse(tokens.begin(), tokens.end());
     // std::cout << "expressions: " << expressions << std::endl;
 
-    run(expressions);
+    auto optimized = optimize(expressions);
+    // std::cout << "optimized: " << optimized << std::endl;
+
+    run(optimized);
 
     return 0;
 }

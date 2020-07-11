@@ -2,7 +2,7 @@ ALL = brainfuck
 
 # CXX = g++-10
 CXX = c++
-CXXFLAGS = -std=c++17 -g -O3
+CXXFLAGS = -std=c++14 -g -O3
 
 all: $(ALL)
 

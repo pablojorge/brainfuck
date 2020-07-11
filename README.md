@@ -9,6 +9,7 @@ A collection of [brainfuck](http://www.muppetlabs.com/~breadbox/bf/) interpreter
 - [Languages](#languages)
     - [asm](#asm)
     - [C](#c)
+    - [C++](#c++)
     - [Golang](#go) (contributed by [Philip K.](https://github.com/phikal))
     - [Haskell](#haskell)
     - [Javascript](#javascript)
@@ -62,6 +63,21 @@ Source: [c/brainfuck.c](c/brainfuck.c)
     $ cd c
     $ make brainfuck
     cc brainfuck.c -o brainfuck
+    $ ./brainfuck ../programs/hello.bf
+    Hello World!
+
+
+### C++
+
+C++ version, with improved optimizations (compressed contiguous identical expressions).
+
+Tested with Clang 11.0.3 and GCC 10.1.0.
+
+Source: [cpp/brainfuck.cpp](cpp/brainfuck.cpp)
+
+    $ cd cpp
+    $ make brainfuck
+    g++-10 -std=c++17 -g -O3 brainfuck.cpp -o brainfuck
     $ ./brainfuck ../programs/hello.bf
     Hello World!
 
