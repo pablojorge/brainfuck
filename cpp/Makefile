@@ -1,4 +1,4 @@
-ALL = brainfuck
+ALL = brainfuck brainfuck-oop
 
 # CXX = g++-10
 CXX = c++
