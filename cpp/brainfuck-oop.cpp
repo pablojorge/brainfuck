@@ -32,8 +32,35 @@ public:
     }
 };
 
-class Runner;
+class Increment;
+class Decrement;
+class Forward;
+class Backward;
+class Input;
+class Output;
+class Loop;
 
+class BaseMatcher
+{
+public:
+    virtual bool match(const Increment&) const {return false;}
+    virtual bool match(const Decrement&) const {return false;}
+    virtual bool match(const Forward&) const {return false;}
+    virtual bool match(const Backward&) const {return false;}
+    virtual bool match(const Input&) const {return false;}
+    virtual bool match(const Output&) const {return false;}
+    virtual bool match(const Loop&) const {return false;}
+};
+
+template <typename T>
+class ConcreteMatcher : public BaseMatcher
+{
+    virtual bool match(const T&) const {return true;}
+};
+
+using MatcherPtr = std::unique_ptr<BaseMatcher>;
+
+class Runner;
 class ExpressionBase
 {
 public:
@@ -41,10 +68,13 @@ public:
     virtual ~ExpressionBase() {}
 
     virtual void run(Runner& runner) const = 0;
-    virtual bool extend() {return false;}
+    virtual void extend() = 0;
+    virtual bool matches(const ExpressionBase& other) const  = 0;
+    virtual MatcherPtr matcher() const = 0;
 };
 
-using ExpressionVector = std::vector<std::unique_ptr<ExpressionBase>>;
+using ExpressionPtr = std::unique_ptr<ExpressionBase>;
+using ExpressionVector = std::vector<ExpressionPtr>;
 
 class Runner {
 private:
@@ -71,7 +101,13 @@ public:
     Increment(ssize_t offset) : ExpressionBase(), offset_(offset) {}
     virtual ~Increment() = default;
     virtual void run(Runner& runner) const {runner.memory().inc(offset_);}
-    virtual bool extend() {++offset_; return true;};
+    virtual void extend() {++offset_;}
+    virtual MatcherPtr matcher() const {
+        return MatcherPtr(new ConcreteMatcher<Increment>());
+    }
+    virtual bool matches(const ExpressionBase& other) const {
+        return other.matcher()->match(*this);
+    }
 };
 
 class Decrement : public ExpressionBase
@@ -82,7 +118,13 @@ public:
     Decrement(ssize_t offset) : ExpressionBase(), offset_(offset) {}
     virtual ~Decrement() = default;
     virtual void run(Runner& runner) const {runner.memory().dec(offset_);}
-    virtual bool extend() {++offset_; return true;};
+    virtual void extend() {++offset_;}
+    virtual MatcherPtr matcher() const {
+        return MatcherPtr(new ConcreteMatcher<Decrement>());
+    }
+    virtual bool matches(const ExpressionBase& other) const {
+        return other.matcher()->match(*this);
+    }
 };
 
 class Forward : public ExpressionBase
@@ -93,7 +135,13 @@ public:
     Forward(ssize_t offset) : ExpressionBase(), offset_(offset) {}
     virtual ~Forward() = default;
     virtual void run(Runner& runner) const {runner.memory().fwd(offset_);}
-    virtual bool extend() {++offset_; return true;};
+    virtual void extend() {++offset_;}
+    virtual MatcherPtr matcher() const {
+        return MatcherPtr(new ConcreteMatcher<Forward>());
+    }
+    virtual bool matches(const ExpressionBase& other) const {
+        return other.matcher()->match(*this);
+    }
 };
 
 class Backward : public ExpressionBase
@@ -104,7 +152,13 @@ public:
     Backward(ssize_t offset) : ExpressionBase(), offset_(offset) {}
     virtual ~Backward() = default;
     virtual void run(Runner& runner) const {runner.memory().bwd(offset_);}
-    virtual bool extend() {++offset_; return true;};
+    virtual void extend() {++offset_;}
+    virtual MatcherPtr matcher() const {
+        return MatcherPtr(new ConcreteMatcher<Backward>());
+    }
+    virtual bool matches(const ExpressionBase& other) const {
+        return other.matcher()->match(*this);
+    }
 };
 
 class Input : public ExpressionBase
@@ -119,6 +173,12 @@ public:
         if (runner.memory().read() == EOF)
             exit(0);
     }
+
+    virtual void extend() {}
+    virtual MatcherPtr matcher() const {
+        return MatcherPtr(new BaseMatcher());
+    }
+    virtual bool matches(const ExpressionBase& other) const {return false;}
 };
 
 class Output : public ExpressionBase
@@ -132,6 +192,12 @@ public:
         putchar(runner.memory().read()); 
         fflush(stdout); 
     }
+
+    virtual void extend() {}
+    virtual MatcherPtr matcher() const {
+        return MatcherPtr(new BaseMatcher());
+    }
+    virtual bool matches(const ExpressionBase& other) const {return false;}
 };
 
 class Loop : public ExpressionBase
@@ -153,39 +219,15 @@ public:
             runner.run(children_);
         }
     }
-};
 
-enum class Token {
-    Inc,
-    Dec,
-    Fwd,
-    Bwd,
-    Input,
-    Output,
-    LoopStart,
-    LoopEnd
-};
-
-using TokenVector = std::vector<Token>;
-
-auto tokenize(const std::vector<char> &program) {
-    TokenVector tokens;
-
-    for(auto c: program) {
-        switch(c) {
-            case '+': tokens.push_back(Token::Inc); break;
-            case '-': tokens.push_back(Token::Dec); break;
-            case '>': tokens.push_back(Token::Fwd); break;
-            case '<': tokens.push_back(Token::Bwd); break;
-            case ',': tokens.push_back(Token::Input); break;
-            case '.': tokens.push_back(Token::Output); break;
-            case '[': tokens.push_back(Token::LoopStart); break;
-            case ']': tokens.push_back(Token::LoopEnd); break;
-        }
+    virtual void extend() {}
+    virtual MatcherPtr matcher() const {
+        return MatcherPtr(new BaseMatcher());
     }
+    virtual bool matches(const ExpressionBase& other) const {return false;}
+};
 
-    return std::move(tokens);
-}
+using TokenVector = std::vector<char>;
 
 class Parser
 {
@@ -204,34 +246,34 @@ public:
 ExpressionVector Parser::parse() {
     ExpressionVector expressions;
 
-    auto push = [&](ExpressionBase* exp) {
-        expressions.push_back(
-            std::unique_ptr<ExpressionBase>(exp)
-        );
-    };
-
     while (pos_ != end_) {
-        if(!expressions.empty() &&
-           *(pos_-1)==(*pos_) &&
-           expressions.back()->extend()) {
-            ++pos_;
-            continue;
-        }
+        ExpressionPtr next;
+
         switch(*pos_) {
-            case Token::Inc:    push(new Increment(1)); break;
-            case Token::Dec:    push(new Decrement(1)); break;
-            case Token::Fwd:    push(new Forward(1));   break;
-            case Token::Bwd:    push(new Backward(1));  break;
-            case Token::Input:  push(new Input());      break;
-            case Token::Output: push(new Output());     break;
-            case Token::LoopStart:
+            case '+': next = ExpressionPtr(new Increment(1)); break;
+            case '-': next = ExpressionPtr(new Decrement(1)); break;
+            case '>': next = ExpressionPtr(new Forward(1));   break;
+            case '<': next = ExpressionPtr(new Backward(1));  break;
+            case ',': next = ExpressionPtr(new Input());      break;
+            case '.': next = ExpressionPtr(new Output());     break;
+            case '[':
                 ++pos_;
-                push(new Loop(std::move(parse())));
+                next = ExpressionPtr(new Loop(std::move(parse())));
                 break;
-            case Token::LoopEnd:
+            case ']':
                 return std::move(expressions);
         }
+
         ++pos_;
+
+        if (!next) {
+            continue;
+        } else if (expressions.empty() ||
+                  !expressions.back()->matches(*next)) {
+            expressions.push_back(std::move(next));
+        } else {
+            expressions.back()->extend();
+        }
     }
 
     return std::move(expressions);
@@ -253,9 +295,7 @@ int main(int argc, char *argv[]) {
         std::back_inserter(program)
     );
 
-    auto tokens = tokenize(program);
-
-    auto expressions = Parser(tokens).parse();
+    auto expressions = Parser(program).parse();
 
     Runner().run(expressions);
 
