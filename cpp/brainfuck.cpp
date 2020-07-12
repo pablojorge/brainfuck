@@ -224,22 +224,22 @@ ExpressionVector optimize(ExpressionVector& expressions) {
 
 class Memory
 {
-    std::array<char, 30000> memory_;
+    std::array<unsigned int, 30000> memory_;
     decltype(memory_.begin()) ptr_;
 
 public:
     Memory() : memory_(), ptr_(memory_.begin()) {}
     ~Memory() = default;
 
-    inline void inc(int offset) { *this->ptr_ += offset; }
-    inline void dec(int offset) { *this->ptr_ -= offset; }
-    inline void fwd(int offset) {  this->ptr_ += offset; }
-    inline void bwd(int offset) {  this->ptr_ -= offset; }
+    inline void inc(unsigned int offset) { *this->ptr_ += offset; }
+    inline void dec(unsigned int offset) { *this->ptr_ -= offset; }
+    inline void fwd(unsigned int offset) {  this->ptr_ += offset; }
+    inline void bwd(unsigned int offset) {  this->ptr_ -= offset; }
 
-    inline char read() {
+    inline unsigned int read() {
         return *this->ptr_;
     }
-    inline void write(char c) {
+    inline void write(unsigned int c) {
         *this->ptr_=c;
     }
 };
@@ -277,10 +277,10 @@ void run(const ExpressionVector& expressions) {
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T> &v) {
     std::cout << "[";
-    if (v.size()) {
+    if (!v.empty()) {
         std::for_each(v.begin(), v.end()-1,
                       [](auto &e){std::cout << e << ", ";});
-        std::cout << *(v.end()-1);
+        std::cout << v.back();
     }
     std::cout << "]";
     return os;
@@ -289,7 +289,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T> &v) {
 int main(int argc, char *argv[]) {
     std::ifstream ifs(argv[1]);
 
-    if (!ifs.good()) {
+    if (!ifs) {
         std::cerr << "Invalid filename!" << std::endl;
         return 1;
     }
