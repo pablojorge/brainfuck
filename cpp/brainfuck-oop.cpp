@@ -41,6 +41,7 @@ public:
     virtual ~ExpressionBase() {}
 
     virtual void run(Runner& runner) const = 0;
+    virtual bool extend() {return false;}
 };
 
 using ExpressionVector = std::vector<std::unique_ptr<ExpressionBase>>;
@@ -70,6 +71,7 @@ public:
     Increment(ssize_t offset) : ExpressionBase(), offset_(offset) {}
     virtual ~Increment() = default;
     virtual void run(Runner& runner) const {runner.memory().inc(offset_);}
+    virtual bool extend() {++offset_; return true;};
 };
 
 class Decrement : public ExpressionBase
@@ -80,6 +82,7 @@ public:
     Decrement(ssize_t offset) : ExpressionBase(), offset_(offset) {}
     virtual ~Decrement() = default;
     virtual void run(Runner& runner) const {runner.memory().dec(offset_);}
+    virtual bool extend() {++offset_; return true;};
 };
 
 class Forward : public ExpressionBase
@@ -90,6 +93,7 @@ public:
     Forward(ssize_t offset) : ExpressionBase(), offset_(offset) {}
     virtual ~Forward() = default;
     virtual void run(Runner& runner) const {runner.memory().fwd(offset_);}
+    virtual bool extend() {++offset_; return true;};
 };
 
 class Backward : public ExpressionBase
@@ -100,6 +104,7 @@ public:
     Backward(ssize_t offset) : ExpressionBase(), offset_(offset) {}
     virtual ~Backward() = default;
     virtual void run(Runner& runner) const {runner.memory().bwd(offset_);}
+    virtual bool extend() {++offset_; return true;};
 };
 
 class Input : public ExpressionBase
@@ -150,12 +155,44 @@ public:
     }
 };
 
+enum class Token {
+    Inc,
+    Dec,
+    Fwd,
+    Bwd,
+    Input,
+    Output,
+    LoopStart,
+    LoopEnd
+};
+
+using TokenVector = std::vector<Token>;
+
+auto tokenize(const std::vector<char> &program) {
+    TokenVector tokens;
+
+    for(auto c: program) {
+        switch(c) {
+            case '+': tokens.push_back(Token::Inc); break;
+            case '-': tokens.push_back(Token::Dec); break;
+            case '>': tokens.push_back(Token::Fwd); break;
+            case '<': tokens.push_back(Token::Bwd); break;
+            case ',': tokens.push_back(Token::Input); break;
+            case '.': tokens.push_back(Token::Output); break;
+            case '[': tokens.push_back(Token::LoopStart); break;
+            case ']': tokens.push_back(Token::LoopEnd); break;
+        }
+    }
+
+    return std::move(tokens);
+}
+
 class Parser
 {
-    std::vector<char>::iterator pos_, end_;
+    TokenVector::iterator pos_, end_;
 
 public:
-    Parser(std::vector<char>& tokens)
+    Parser(TokenVector& tokens)
      : pos_(tokens.begin()),
        end_(tokens.end()) {}
 
@@ -174,18 +211,24 @@ ExpressionVector Parser::parse() {
     };
 
     while (pos_ != end_) {
+        if(!expressions.empty() &&
+           *(pos_-1)==(*pos_) &&
+           expressions.back()->extend()) {
+            ++pos_;
+            continue;
+        }
         switch(*pos_) {
-            case '+': push(new Increment(1)); break;
-            case '-': push(new Decrement(1)); break;
-            case '>': push(new Forward(1));   break;
-            case '<': push(new Backward(1));  break;
-            case ',': push(new Input());      break;
-            case '.': push(new Output());     break;
-            case '[':
+            case Token::Inc:    push(new Increment(1)); break;
+            case Token::Dec:    push(new Decrement(1)); break;
+            case Token::Fwd:    push(new Forward(1));   break;
+            case Token::Bwd:    push(new Backward(1));  break;
+            case Token::Input:  push(new Input());      break;
+            case Token::Output: push(new Output());     break;
+            case Token::LoopStart:
                 ++pos_;
                 push(new Loop(std::move(parse())));
                 break;
-            case ']':
+            case Token::LoopEnd:
                 return std::move(expressions);
         }
         ++pos_;
@@ -210,7 +253,9 @@ int main(int argc, char *argv[]) {
         std::back_inserter(program)
     );
 
-    auto expressions = Parser(program).parse();
+    auto tokens = tokenize(program);
+
+    auto expressions = Parser(tokens).parse();
 
     Runner().run(expressions);
 
