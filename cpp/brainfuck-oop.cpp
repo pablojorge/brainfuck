@@ -8,38 +8,6 @@
 #include <tuple>
 #include <vector>
 
-enum class Token {
-    Inc,
-    Dec,
-    Fwd,
-    Bwd,
-    Input,
-    Output,
-    LoopStart,
-    LoopEnd
-};
-
-using TokenVector = std::vector<Token>;
-
-auto tokenize(const std::vector<char> &program) {
-    TokenVector tokens;
-
-    for(auto c: program) {
-        switch(c) {
-            case '+': tokens.push_back(Token::Inc); break;
-            case '-': tokens.push_back(Token::Dec); break;
-            case '>': tokens.push_back(Token::Fwd); break;
-            case '<': tokens.push_back(Token::Bwd); break;
-            case ',': tokens.push_back(Token::Input); break;
-            case '.': tokens.push_back(Token::Output); break;
-            case '[': tokens.push_back(Token::LoopStart); break;
-            case ']': tokens.push_back(Token::LoopEnd); break;
-        }
-    }
-
-    return std::move(tokens);
-}
-
 template <typename T=unsigned int>
 class Memory 
 {
@@ -158,7 +126,7 @@ public:
     virtual void run(Runner& runner) const {
         putchar(runner.memory().read()); 
         fflush(stdout); 
-   }
+    }
 };
 
 class Loop : public ExpressionBase
@@ -182,10 +150,21 @@ public:
     }
 };
 
-std::tuple<ExpressionVector,
-           TokenVector::iterator>
-do_parse(TokenVector::iterator begin,
-         TokenVector::iterator end) {
+class Parser
+{
+    std::vector<char>::iterator pos_, end_;
+
+public:
+    Parser(std::vector<char>& tokens)
+     : pos_(tokens.begin()),
+       end_(tokens.end()) {}
+
+    ~Parser() = default;
+    
+    ExpressionVector parse();
+};
+
+ExpressionVector Parser::parse() {
     ExpressionVector expressions;
 
     auto push = [&](ExpressionBase* exp) {
@@ -194,43 +173,25 @@ do_parse(TokenVector::iterator begin,
         );
     };
 
-    while (begin != end) {
-        switch(*begin) {
-            case Token::Inc:
-                push(new Increment(1));
+    while (pos_ != end_) {
+        switch(*pos_) {
+            case '+': push(new Increment(1)); break;
+            case '-': push(new Decrement(1)); break;
+            case '>': push(new Forward(1));   break;
+            case '<': push(new Backward(1));  break;
+            case ',': push(new Input());      break;
+            case '.': push(new Output());     break;
+            case '[':
+                ++pos_;
+                push(new Loop(std::move(parse())));
                 break;
-            case Token::Dec:
-                push(new Decrement(1));
-                break;
-            case Token::Fwd:
-                push(new Forward(1));
-                break;
-            case Token::Bwd:
-                push(new Backward(1));
-                break;
-            case Token::Input:
-                push(new Input());
-                break;
-            case Token::Output:
-                push(new Output());
-                break;
-            case Token::LoopStart: {
-                    auto &&ret = do_parse(begin+1, end);
-                    push(new Loop(std::move(std::get<0>(ret))));
-                    begin = std::get<1>(ret);
-                }
-                break;
-            case Token::LoopEnd:
-                return std::make_tuple(std::move(expressions), begin);
+            case ']':
+                return std::move(expressions);
         }
-        ++begin;
+        ++pos_;
     }
 
-    return std::make_tuple(std::move(expressions), begin);
-}
-
-auto parse(TokenVector::iterator begin, TokenVector::iterator end) {
-    return std::get<0>(do_parse(begin, end));
+    return std::move(expressions);
 }
 
 int main(int argc, char *argv[]) {
@@ -249,9 +210,7 @@ int main(int argc, char *argv[]) {
         std::back_inserter(program)
     );
 
-    auto tokens = tokenize(program);
-
-    auto expressions = parse(tokens.begin(), tokens.end());
+    auto expressions = Parser(program).parse();
 
     Runner().run(expressions);
 

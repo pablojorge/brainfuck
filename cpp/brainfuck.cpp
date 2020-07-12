@@ -186,7 +186,7 @@ auto parse(TokenVector::iterator begin, TokenVector::iterator end) {
 ExpressionVector optimize(ExpressionVector& expressions) {
     ExpressionVector optimized;
 
-    for(auto &&expression: expressions) {
+    for(auto &expression: expressions) {
         if(optimized.begin()==optimized.end()) {
             optimized.push_back(std::move(expression));
             continue;
