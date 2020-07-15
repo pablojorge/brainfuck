@@ -9,7 +9,7 @@ A collection of [brainfuck](http://www.muppetlabs.com/~breadbox/bf/) interpreter
 - [Languages](#languages)
     - [asm](#asm)
     - [C](#c)
-    - [C++](#c++)
+    - [C++](#c-1)
     - [Golang](#go) (contributed by [Philip K.](https://github.com/phikal))
     - [Haskell](#haskell)
     - [Javascript](#javascript)
@@ -206,7 +206,7 @@ To use the JIT-enabled version: (thanks [Gsam](https://github.com/GSam) for the 
 
 ### Rust
 
-Interpreter source: [rust/src/lib.rs](rust/src/lib.rs). Includes improved optimizations, like compressing identical contiguous operations.
+Interpreter source: [rust/src/lib.rs](rust/src/lib.rs). Includes improved optimizations (compressing identical contiguous operations)
 
 Translator source: [rust/src/bin/translate.rs](rust/src/bin/translate.rs). Supports translating to Rust and C.
 

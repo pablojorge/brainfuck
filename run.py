@@ -69,6 +69,7 @@ class Command(object):
         return self.__parser(process.stdout)
 
     def __call__(self, *args, **kwargs):
+        assert not (self.__args), "Args already defined"
         return self._args(*args, **kwargs)._run()
 
 

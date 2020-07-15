@@ -5,7 +5,7 @@ use std::convert::TryInto;
 use std::ops::{AddAssign, SubAssign};
 
 extern crate num;
-use num::{Zero,One};
+use num::Zero;
 
 type Position = usize;
 
@@ -39,7 +39,7 @@ pub struct Buffer<T> {
 }
 
 impl<T> Buffer<T> 
-    where T: Zero + One + Copy + AddAssign + SubAssign {
+    where T: Zero + Copy + AddAssign + SubAssign {
     pub fn new(buf_size: usize) -> Self {
         let mut buffer = Self {
             buf: Vec::with_capacity(buf_size),
