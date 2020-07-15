@@ -231,25 +231,23 @@ using TokenVector = std::vector<char>;
 
 class Parser
 {
-    TokenVector::iterator pos_, end_;
-
 public:
-    Parser(TokenVector& tokens)
-     : pos_(tokens.begin()),
-       end_(tokens.end()) {}
-
+    Parser() = default;
     ~Parser() = default;
     
-    ExpressionVector parse();
+    ExpressionVector parse(TokenVector&);
 };
 
-ExpressionVector Parser::parse() {
-    ExpressionVector expressions;
+ExpressionVector Parser::parse(TokenVector& tokens) {
+    using ExpressionVectorPtr = std::unique_ptr<ExpressionVector>;
 
-    while (pos_ != end_) {
+    std::vector<ExpressionVectorPtr> stack;
+    ExpressionVectorPtr expressions(new ExpressionVector());
+
+    for (auto token: tokens) {
         ExpressionPtr next;
 
-        switch(*pos_) {
+        switch(token) {
             case '+': next = ExpressionPtr(new Increment(1)); break;
             case '-': next = ExpressionPtr(new Decrement(1)); break;
             case '>': next = ExpressionPtr(new Forward(1));   break;
@@ -257,26 +255,27 @@ ExpressionVector Parser::parse() {
             case ',': next = ExpressionPtr(new Input());      break;
             case '.': next = ExpressionPtr(new Output());     break;
             case '[':
-                ++pos_;
-                next = ExpressionPtr(new Loop(std::move(parse())));
+                stack.push_back(std::move(expressions));
+                expressions = ExpressionVectorPtr(new ExpressionVector());
                 break;
             case ']':
-                return std::move(expressions);
+                next = ExpressionPtr(new Loop(std::move(*expressions)));
+                expressions = std::move(stack.back());
+                stack.pop_back();
+                break;
         }
-
-        ++pos_;
 
         if (!next) {
             continue;
-        } else if (expressions.empty() ||
-                  !expressions.back()->matches(*next)) {
-            expressions.push_back(std::move(next));
+        } else if (expressions->empty() ||
+                  !expressions->back()->matches(*next)) {
+            expressions->push_back(std::move(next));
         } else {
-            expressions.back()->extend();
+            expressions->back()->extend();
         }
     }
 
-    return std::move(expressions);
+    return std::move(*expressions);
 }
 
 int main(int argc, char *argv[]) {
@@ -295,7 +294,7 @@ int main(int argc, char *argv[]) {
         std::back_inserter(program)
     );
 
-    auto expressions = Parser(program).parse();
+    auto expressions = Parser().parse(program);
 
     Runner().run(expressions);
 
