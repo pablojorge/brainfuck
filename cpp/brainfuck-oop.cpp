@@ -1,11 +1,8 @@
-#include <algorithm>
 #include <array>
+#include <exception>
 #include <fstream>
 #include <iostream>
-#include <map>
 #include <memory>
-#include <string>
-#include <tuple>
 #include <vector>
 
 template <typename T=unsigned int>
@@ -24,12 +21,8 @@ public:
     inline void fwd(ssize_t offset) {  this->ptr_ += offset; }
     inline void bwd(ssize_t offset) {  this->ptr_ -= offset; }
 
-    inline T read() {
-        return *this->ptr_;
-    }
-    inline void write(T c) {
-        *this->ptr_=c;
-    }
+    inline T read() const { return *this->ptr_; }
+    inline void write(T c) { *this->ptr_=c; }
 };
 
 class Increment;
@@ -229,6 +222,18 @@ public:
 
 using TokenVector = std::vector<char>;
 
+class ExcessiveOpeningBrackets: public std::exception {
+    virtual const char* what() const throw() {
+        return "Too many opening brackets";
+    }
+};
+
+class UnexpectedClosingBracket: public std::exception {
+    virtual const char* what() const throw() {
+        return "Too many closing brackets";
+    }
+};
+
 class Parser
 {
 public:
@@ -259,6 +264,7 @@ ExpressionVector Parser::parse(TokenVector& tokens) {
                 expressions = ExpressionVectorPtr(new ExpressionVector());
                 break;
             case ']':
+                if (stack.empty()) throw UnexpectedClosingBracket();
                 next = ExpressionPtr(new Loop(std::move(*expressions)));
                 expressions = std::move(stack.back());
                 stack.pop_back();
@@ -274,6 +280,8 @@ ExpressionVector Parser::parse(TokenVector& tokens) {
             expressions->back()->extend();
         }
     }
+
+    if (!stack.empty()) throw ExcessiveOpeningBrackets();
 
     return std::move(*expressions);
 }
@@ -294,9 +302,12 @@ int main(int argc, char *argv[]) {
         std::back_inserter(program)
     );
 
-    auto expressions = Parser().parse(program);
-
-    Runner().run(expressions);
+    try {
+        auto expressions = Parser().parse(program);
+        Runner().run(expressions);
+    } catch (std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
 
     return 0;
 }
