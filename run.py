@@ -19,37 +19,58 @@ def change_dir(dirname):
 
 
 class Command(object):
-    def __init__(self, cmd, args, input_, parser):
+    def __init__(self, cmd, args, kwargs, input_, parser):
         self.__cmd = cmd
         self.__args = args
+        self.__kwargs = kwargs
         self.__input = input_
         self.__parser = parser
 
     def __getattr__(self, name):
-        return Command(self.__cmd + [name], self.__args, self.__input, self.__parser)
+        return Command(self.__cmd + [name],
+                       self.__args,
+                       self.__kwargs, 
+                       self.__input, 
+                       self.__parser)
 
     def _parser(self, parser):
-        return Command(self.__cmd, self.__args, self.__input, parser)
+        return Command(self.__cmd,
+                       self.__args,
+                       self.__kwargs, 
+                       self.__input,
+                       parser)
 
     def _input(self, input_):
-        return Command(self.__cmd, self.__args, input_, self.__parser)
+        return Command(self.__cmd,
+                       self.__args,
+                       self.__kwargs,
+                       input_, 
+                       self.__parser)
 
     def _args(self, *args, **kwargs):
-        fix_underscore = lambda s: s.replace('_', '-')
+        args = self.__args + list(args)
 
-        _args = []
+        kwargs_ = dict(self.__kwargs)
+        kwargs_.update(kwargs)
 
-        for arg, value in kwargs.items():
-            _args.append("--%s=%s" % (fix_underscore(arg), value))
-
-        for arg in args:
-            _args.append(arg)
-
-        return Command(self.__cmd, _args, self.__input, self.__parser)
+        return Command(self.__cmd,
+                       args,
+                       kwargs,
+                       self.__input,
+                       self.__parser)
 
     def __build(self):
         fix_underscore = lambda s: s.replace('_', '-')
-        return list(map(fix_underscore, self.__cmd)) + self.__args
+
+        cmd = list(map(fix_underscore, self.__cmd))
+
+        for arg, value in self.__kwargs.items():
+            cmd.append("--%s=%s" % (fix_underscore(arg), value))
+
+        for arg in self.__args:
+            cmd.append(arg)
+
+        return cmd
 
     def __str__(self):
         return "Command({})".format(self.__build())
@@ -69,12 +90,11 @@ class Command(object):
         return self.__parser(process.stdout)
 
     def __call__(self, *args, **kwargs):
-        assert not (self.__args), "Args already defined"
         return self._args(*args, **kwargs)._run()
 
 
-def command(program, args=[], input_="", parser=str):
-    return Command([program], args=args, input_=input_, parser=parser)
+def command(program, args=[], kwargs={}, input_="", parser=str):
+    return Command([program], args=args, kwargs=kwargs, input_=input_, parser=parser)
 
 
 class Timer(object):
@@ -157,8 +177,11 @@ class Test:
 def run(tests, env):
     with change_dir(env.cwd):
         builder = env.builder()
-        print("Building env '{}'...".format(env.desc))
-        output = builder._run()
+        if builder:
+            print("Building env '{}'...".format(env.desc))
+            output = builder._run()
+        else:
+            print("Skipping build in env '{}'...".format(env.desc))
 
         for test in tests:
             sys.stdout.write("Running '{}' in env '{}'... ".format(test.desc, env.desc))
@@ -214,6 +237,13 @@ class Rust(Environment):
     def builder(self): return cargo.build
     def runner(self): return cargo.run
 
+class PyPy(Environment):
+    def __init__(self):
+        super().__init__("PyPy", "./python")
+
+    def builder(self): return None
+    def runner(self): return command("pypy")._args("./brainfuck-simple.py")
+
 
 class Primes(Test):
     def __init__(self, up_to):
@@ -241,7 +271,8 @@ def main():
         CPPADTGCC(),
         CPPOOPClang(),
         CPPOOPGCC(),
-        Rust()
+        Rust(),
+        PyPy(),
     ]
     tests = [
         Primes(200),
