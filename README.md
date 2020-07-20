@@ -293,7 +293,7 @@ And then connect to <http://localhost:8000>. Modify the `program` and `input` va
 
 Notes:
 
-  * The same code is 40 times slower in CPython vs in PyPy. You can have a really big gain for "free" (almost), by just using the PyPy interpreter.
+  * The _same_ code is 40 times slower in CPython vs PyPy. You can have a really big gain for "free" (almost), by just using the PyPy interpreter.
   * Adapting the source to RPython is not free of course, and the gain is not as big, BUT if we explictly add support for the JIT, the gain makes it totally worthy. In fact the gain of this version compared with running the simplified version (unmodified) with PyPy, is comparable to the gain obtained by running the unmodified version with PyPy vs running it with CPython.
   * The other performance differences are totally expected (C interpreter compiled with optimisations has an equivalent performance to the assembler interpreter, the translated to C version is almost two orders of magnitude faster than the interpreted version, etc.).
   * The JIT-enabled Python version runs _faster_ than the translated-to-C version (compiled without optimizations).

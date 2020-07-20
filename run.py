@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import time
+import functools
 import contextlib
 import subprocess
 
@@ -175,6 +176,8 @@ class Test:
 
 
 def run(tests, env):
+    results = []
+
     with change_dir(env.cwd):
         builder = env.builder()
         if builder:
@@ -191,6 +194,9 @@ def run(tests, env):
                 test.command(env.runner())._run()
 
             sys.stdout.write("{}\n".format(timer))
+            results.append(str(timer))
+
+    return results
 
 
 class C(Environment):
@@ -262,14 +268,58 @@ class Mandelbrot(Test):
         return runner._args("../programs/mandelbrot.bf")
 
 
+def markdown_table(headers, rows, align=-1): # -1: left, 1: right
+    pre = lambda a, s: s + a # prepend
+    app = lambda a, s: a + s # append
+
+    # calculate the width of each column
+    widths = functools.reduce(
+        lambda a, f: tuple(
+            map(max, zip(a, map(len, f)))
+        ),
+        rows,
+        map(len, headers)
+    )
+
+    # helpers to fill with spaces each column
+    # and to render a row in markdown format
+    space_fill = lambda f, w: map(
+        lambda p: 
+            (pre if align > 0 else app)(
+                p[0],
+                ' ' * (p[1] + 1 - len(p[0])
+            )
+        ),
+        zip(f, w)
+    )
+    markdown_row = lambda f, w: "|{}|".format(
+        "|".join(space_fill(f, w))
+    )
+
+    # render rows
+    headers = markdown_row(headers, widths)
+    separator = markdown_row(
+        map(lambda w: 
+                (pre if align < 0 else app)(
+                    '-' * w,
+                    ':'
+                ),
+            widths),
+        widths
+    )
+    rows = "\n".join(map(lambda f: markdown_row(f, widths), rows))
+
+    return "\n".join([headers, separator, rows])
+
+
 def main():
     print("Running on {}".format(WorkingCopy('.')))
 
     envs = [
         C(),
         CPPADTClang(),
-        CPPADTGCC(),
         CPPOOPClang(),
+        CPPADTGCC(),
         CPPOOPGCC(),
         Rust(),
         PyPy(),
@@ -279,8 +329,14 @@ def main():
         Mandelbrot()
     ]
 
+    headers = [''] + [t.desc for t in tests]
+    rows = []
+
     for env in envs:
-        run(tests, env)
+        results = run(tests, env)
+        rows.append([env.desc] + results)
+
+    print(markdown_table(headers, rows, align=1))
 
 
 if __name__ == '__main__':
