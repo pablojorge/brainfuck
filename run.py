@@ -19,18 +19,25 @@ def change_dir(dirname):
         os.chdir(curdir)
 
 
+def merge_dicts(a, b):
+    return dict(tuple(a.items()) +
+                tuple(b.items()))
+
+
 class Command(object):
-    def __init__(self, cmd, args, kwargs, input_, parser):
+    def __init__(self, cmd, args, kwargs, env, input_, parser):
         self.__cmd = cmd
         self.__args = args
         self.__kwargs = kwargs
+        self.__env = env
         self.__input = input_
         self.__parser = parser
 
     def __getattr__(self, name):
         return Command(self.__cmd + [name],
                        self.__args,
-                       self.__kwargs, 
+                       self.__kwargs,
+                       self.__env, 
                        self.__input, 
                        self.__parser)
 
@@ -38,6 +45,7 @@ class Command(object):
         return Command(self.__cmd,
                        self.__args,
                        self.__kwargs, 
+                       self.__env, 
                        self.__input,
                        parser)
 
@@ -45,7 +53,16 @@ class Command(object):
         return Command(self.__cmd,
                        self.__args,
                        self.__kwargs,
+                       self.__env, 
                        input_, 
+                       self.__parser)
+
+    def _env(self, env):
+        return Command(self.__cmd,
+                       self.__args,
+                       self.__kwargs,
+                       merge_dicts(self.__env, env),
+                       self.__input, 
                        self.__parser)
 
     def _args(self, *args, **kwargs):
@@ -57,6 +74,7 @@ class Command(object):
         return Command(self.__cmd,
                        args,
                        kwargs,
+                       self.__env,
                        self.__input,
                        self.__parser)
 
@@ -81,6 +99,7 @@ class Command(object):
             process = subprocess.run(
                 self.__build(),
                 input=self.__input,
+                env=merge_dicts(os.environ, self.__env),
                 capture_output=True,
                 encoding='utf8',
                 check=True
@@ -94,8 +113,8 @@ class Command(object):
         return self._args(*args, **kwargs)._run()
 
 
-def command(program, args=[], kwargs={}, input_="", parser=str):
-    return Command([program], args=args, kwargs=kwargs, input_=input_, parser=parser)
+def command(program, args=[], kwargs={}, env={}, input_="", parser=str):
+    return Command([program], args=args, kwargs=kwargs, env=env, input_=input_, parser=parser)
 
 
 class Timer(object):
@@ -243,12 +262,30 @@ class Rust(Environment):
     def builder(self): return cargo.build
     def runner(self): return cargo.run
 
+class Go(Environment):
+    def __init__(self):
+        super().__init__("Go", "./go")
+
+    def builder(self): return None
+    def runner(self):
+        return command("go") \
+                ._args("run", "brainfuck.go") \
+                ._env({"GOPATH": os.getcwd()})
+
 class PyPy(Environment):
     def __init__(self):
         super().__init__("PyPy", "./python")
 
     def builder(self): return None
     def runner(self): return command("pypy")._args("./brainfuck-simple.py")
+
+
+class Hello(Test):
+    def __init__(self):
+        super().__init__("Hello")
+
+    def command(self, runner) -> Command:
+        return runner._args("../programs/hello.bf")
 
 
 class Primes(Test):
@@ -268,14 +305,16 @@ class Mandelbrot(Test):
         return runner._args("../programs/mandelbrot.bf")
 
 
-def markdown_table(headers, rows, align=-1): # -1: left, 1: right
-    pre = lambda a, s: s + a # prepend
-    app = lambda a, s: a + s # append
+def markdown_table(headers, rows, align=-1):
+    # prepend or append 'f' 'c' times to 'v', depending
+    # on alignment (-1: left, 1: right):
+    fill = lambda v, f, c: \
+        (f*c) + v if align > 0 else v + (f*c)
 
     # calculate the width of each column
     widths = functools.reduce(
-        lambda a, f: tuple(
-            map(max, zip(a, map(len, f)))
+        lambda a, r: tuple(
+            map(max, zip(a, map(len, r)))
         ),
         rows,
         map(len, headers)
@@ -284,30 +323,22 @@ def markdown_table(headers, rows, align=-1): # -1: left, 1: right
     # helpers to fill with spaces each column
     # and to render a row in markdown format
     space_fill = lambda f, w: map(
-        lambda p: 
-            (pre if align > 0 else app)(
-                p[0],
-                ' ' * (p[1] + 1 - len(p[0])
-            )
-        ),
+        lambda p: fill(p[0], ' ', (p[1] + 1 - len(p[0]))),
         zip(f, w)
     )
     markdown_row = lambda f, w: "|{}|".format(
         "|".join(space_fill(f, w))
     )
 
-    # render rows
+    # render table
     headers = markdown_row(headers, widths)
     separator = markdown_row(
-        map(lambda w: 
-                (pre if align < 0 else app)(
-                    '-' * w,
-                    ':'
-                ),
-            widths),
+        map(lambda w: fill(':', '-', w-1), widths),
         widths
     )
-    rows = "\n".join(map(lambda f: markdown_row(f, widths), rows))
+    rows = "\n".join(
+        map(lambda f: markdown_row(f, widths), rows)
+    )
 
     return "\n".join([headers, separator, rows])
 
@@ -322,11 +353,13 @@ def main():
         CPPADTGCC(),
         CPPOOPGCC(),
         Rust(),
+        Go(),
         PyPy(),
     ]
     tests = [
+        Hello(),
         Primes(200),
-        Mandelbrot()
+        Mandelbrot(),
     ]
 
     headers = [''] + [t.desc for t in tests]
