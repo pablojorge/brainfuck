@@ -9,7 +9,7 @@ all: $(ALL)
 %: %.cpp
 	$(CXX) $(CXXFLAGS) $< -o $@
 
-dis:
+dump:
 	objdump -dSC ./brainfuck
 
 clean:

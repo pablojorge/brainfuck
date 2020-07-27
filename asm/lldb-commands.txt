@@ -1,0 +1,4 @@
+# https://lldb.llvm.org/use/map.html
+b main
+display register read
+r

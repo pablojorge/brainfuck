@@ -18,7 +18,7 @@
 # Buffers
 ##
 
-.section,bss
+.bss
  .lcomm program, 50000 # Program
  .lcomm buffer, 30000 # Memory buffer
 
