@@ -279,27 +279,39 @@ public:
         // memset(mem, 0x00, sizeof(mem) * sizeof(mem[0]));
     }
 
-    void write(unsigned char byte) {
+    unsigned char* ptr () const { return ptr_; }
+    void ptr (unsigned char* ptr) { ptr_ = ptr; }
+
+    void writeb(unsigned char byte) {
         (*ptr_++) = byte;
     }
 
-    void write(const unsigned char* bytes, ssize_t size) {
+    void writel(ssize_t value) {
+        writes((unsigned char*)&value, 4);
+    }
+
+    void writes(const unsigned char* bytes, ssize_t size) {
         memcpy(ptr_, bytes, size);
         ptr_ += size;
     }
 
     void movl_rax(ssize_t value) {
         // 100000e7d: 48 c7 c0 0f 00 00 00         movq    $15, %rax
-        write((unsigned char*)"\x48\xc7\xc0", 3);
-        write((unsigned char*)&value, 4);
+        writes((unsigned char*)"\x48\xc7\xc0", 3);
+        writel(value);
+    }
+
+    void addl_eax_prdi() {
+        // 100000ea3: 01 07                        addl    %eax, (%rdi)
+        writes((unsigned char*)"\x01\x07", 2);        
     }
 
     void int3() {
-        write(0xcc);
+        writeb(0xcc);
     }
 
     void ret() {
-        write(0xc3);
+        writeb(0xc3);
     }
 
     void start() {
@@ -330,33 +342,33 @@ class JITVisitor : public ExpressionVisitor
 {
 private:
     JITProgram &program_;
+    std::vector<unsigned char*> stack;
 
 public:
-    JITVisitor(JITProgram& program) : program_(program) {}
+    JITVisitor(JITProgram& program) : program_(program), stack() {}
 
     virtual void visit(const Increment& inc) {
         std::cout << "Increment(" << inc.offset() << ") ";
         program_.movl_rax(inc.offset());
-        // 100000ea3: 01 07                        addl    %eax, (%rdi)
-        program_.write((unsigned char*)"\x01\x07", 2);
+        program_.addl_eax_prdi();
     }
     virtual void visit(const Decrement& dec) {
         std::cout << "Decrement(" << dec.offset() << ") ";
         program_.movl_rax(dec.offset());
         // 100000ea5: 29 07                        subl    %eax, (%rdi)
-        program_.write((unsigned char*)"\x29\x07", 2);
+        program_.writes((unsigned char*)"\x29\x07", 2);
     }
     virtual void visit(const Forward& fwd) {
         std::cout << "Forward(" << fwd.offset() << ") ";
         program_.movl_rax(fwd.offset()*4);
         // 100000e9d: 48 01 c7                     addq    %rax, %rdi
-        program_.write((unsigned char*)"\x48\x01\xc7", 3);
+        program_.writes((unsigned char*)"\x48\x01\xc7", 3);
     }
     virtual void visit(const Backward& bwd) {
         std::cout << "Backward(" << bwd.offset() << ") ";
         program_.movl_rax(bwd.offset()*4);
         // 100000ea0: 48 29 c7                     subq    %rax, %rdi
-        program_.write((unsigned char*)"\x48\x29\xc7", 3);
+        program_.writes((unsigned char*)"\x48\x29\xc7", 3);
     }
     virtual void visit(const Input&) {
         std::cout << "Input ";
@@ -366,7 +378,34 @@ public:
     }
     virtual void visit(const Loop& loop) {
         std::cout << "<Loop start:[ ";
+
+        // 100000f27: 83 3f 00                     cmpl    $0, (%rdi)
+        program_.writes((unsigned char*)"\x83\x3f\x00", 3);
+        // 100000f6b: 0f 84 2f 00 00 00            je      47 <next_iter>
+        program_.writes((unsigned char*)"\x0f\x84", 2);
+        program_.writel(0); // TBD
+
+        stack.push_back(program_.ptr());
+
         this->visit(loop.children());
+
+        // 100000f27: 83 3f 00                     cmpl    $0, (%rdi)
+        program_.writes((unsigned char*)"\x83\x3f\x00", 3);
+        // 100000f2a: 0f 85 70 00 00 00            jne     112 <next_iter>
+        program_.writes((unsigned char*)"\x0f\x85", 2);
+        // asm("int $3");
+        unsigned char* after_loop_start = stack.back();
+        stack.pop_back();
+
+        ssize_t jump_back = after_loop_start - program_.ptr() - 4; // account for operand
+        program_.writel(jump_back);
+
+        unsigned char *after_loop_end = program_.ptr();
+        ssize_t jump_fwd = after_loop_end - after_loop_start;
+        program_.ptr(after_loop_start - 4);
+        program_.writel(jump_fwd);
+        program_.ptr(after_loop_end);
+
         std::cout << "]:Loop end> ";
     }
     virtual void visit(const ExpressionVector& expressions) {

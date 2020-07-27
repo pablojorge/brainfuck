@@ -6,5 +6,6 @@ r
 #disas -s &jit_program.program_ -c 50
 p &mem
 x $0
-c
+disas -b -s program_ -c 20
+# c
 x $0

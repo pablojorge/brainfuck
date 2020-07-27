@@ -1,0 +1,26 @@
+>     : movq 4, rax; addq rax, rdi;
++++   : movq 3, rax; addl eax, (rdi);
+[     : cmp 0, (rdi); je [9];
+>     : movq 4, rax; addq rax, rdi;
++++   : movq 3, rax; addl eax, (rdi);
+<     : movq 4, rax; subq rax, rdi;
+-     : movq 1, rax; subl eax, (rdi);
+]     : cmp 0, (rdi); jne [4];
+(EOF) : ret
+
+9: ptr after generating 8
+4: ptr after generating 3
+
+9: write in [4]-4
+4: write in [9]-4
+
+exp: [
+    fwd(1),
+    inc(3),
+    loop [
+        fwd(1),
+        inc(3),
+        bwd(1),
+        dec(1)
+    ]
+]
