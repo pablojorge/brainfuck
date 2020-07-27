@@ -14,6 +14,9 @@ debug: brainfuck
 # 	gdb -x gdb-commands.txt --args ./brainfuck ../programs/cat.bf
 	lldb -s lldb-commands.txt ./brainfuck -- ../programs/cat.bf
 
+dump:
+	objdump -dS ./brainfuck
+
 clean:
 	rm -rf $(ALL) *.o
 

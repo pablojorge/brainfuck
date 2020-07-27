@@ -145,6 +145,7 @@ _main:
 ##
   # Check arguments count first:
   movq (%rsp), %rcx # "argc"
+  movl $0xa, %eax   
   cmp $0x02, %rcx
   jge get_filename
   print_constant missing_args
@@ -187,19 +188,26 @@ interpreter_loop:
   jge interpreter_end
 
  begin_operand inc_pointer, $0x3e # '>'
-  inc %rsi # Increment data pointer
+  movq 5, %rax   
+  addq %rax, %rdi   # Increment pointed data
  end_operand inc_pointer
 
  begin_operand dec_pointer, $0x3c # '<'
-  dec %rsi # Decrement data pointer
+  movq $0xf, %rax
+  subq %rax, %rdi # Decrement pointed data
  end_operand dec_pointer
 
  begin_operand inc_data, $0x2b # '+'
-  incb (%rsi) # Increment pointed data
+  movq 5, %rax   
+  addq %rax, %rdi
+  subq %rax, %rdi
+  addl %eax, (%rdi)
+  subl %eax, (%rdi)
  end_operand inc_data
 
  begin_operand dec_data, $0x2d # '-'
-  decb (%rsi) # Decrement pointed data
+  movq $0xf, %rax
+  subq %rax, (%rdi) # Decrement pointed data
  end_operand dec_data
 
  begin_operand inputb, $0x2c # ','
@@ -213,14 +221,14 @@ interpreter_loop:
  end_operand outputb
 
  begin_operand loop_start, $0x5b # '['
-  cmpb $0x00, (%rsi) # If the current byte is non zero, # XXX testb
+  cmpl $0x00, (%rdi) # If the current byte is non zero, # XXX testb
   jnz next_iter      # we DON'T have to look for the 
                      # matching ']', just ignore the operand
   fmatch_bracket inc, $0x5b, $0x5d # (inc the program ptr, '[', ']')
  end_operand loop_start
 
  begin_operand loop_end, $0x5d # ']'
-  cmpb $0x00, (%rsi) # If the current byte is zero, # XXX testb
+  cmpl $0x00, (%rdi) # If the current byte is zero, # XXX testb
   jz next_iter       # we DON'T have to look for the 
                      # matching '[', just ignore the operand
   fmatch_bracket dec, $0x5d, $0x5b # (dec the program ptr, ']', '[')
