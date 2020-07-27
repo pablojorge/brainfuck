@@ -25,48 +25,18 @@ public:
     inline void write(T c) { *this->ptr_=c; }
 };
 
-class Increment;
-class Decrement;
-class Forward;
-class Backward;
-class Input;
-class Output;
-class Loop;
-
-class BaseMatcher
-{
-public:
-    virtual bool match(const Increment&) const {return false;}
-    virtual bool match(const Decrement&) const {return false;}
-    virtual bool match(const Forward&) const {return false;}
-    virtual bool match(const Backward&) const {return false;}
-    virtual bool match(const Input&) const {return false;}
-    virtual bool match(const Output&) const {return false;}
-    virtual bool match(const Loop&) const {return false;}
-};
-
-template <typename T>
-class ConcreteMatcher : public BaseMatcher
-{
-    virtual bool match(const T&) const {return true;}
-};
-
-using MatcherPtr = std::unique_ptr<BaseMatcher>;
-
 class Runner;
-class ExpressionBase
+class Expression
 {
 public:
-    ExpressionBase() {}
-    virtual ~ExpressionBase() {}
+    Expression() {}
+    virtual ~Expression() {}
 
     virtual void run(Runner& runner) const = 0;
-    virtual void extend() = 0;
-    virtual bool matches(const ExpressionBase& other) const  = 0;
-    virtual MatcherPtr matcher() const = 0;
+    virtual void extend() {};
 };
 
-using ExpressionPtr = std::unique_ptr<ExpressionBase>;
+using ExpressionPtr = std::unique_ptr<Expression>;
 using ExpressionVector = std::vector<ExpressionPtr>;
 
 class Runner {
@@ -86,138 +56,82 @@ public:
     }
 };
 
-class Increment : public ExpressionBase
+class Increment : public Expression
 {
 private:
     ssize_t offset_;
 public:
-    Increment(ssize_t offset) : ExpressionBase(), offset_(offset) {}
-    virtual ~Increment() = default;
+    Increment(ssize_t offset) : Expression(), offset_(offset) {}
     virtual void run(Runner& runner) const {runner.memory().inc(offset_);}
     virtual void extend() {++offset_;}
-    virtual MatcherPtr matcher() const {
-        return MatcherPtr(new ConcreteMatcher<Increment>());
-    }
-    virtual bool matches(const ExpressionBase& other) const {
-        return other.matcher()->match(*this);
-    }
 };
 
-class Decrement : public ExpressionBase
+class Decrement : public Expression
 {
 private:
     ssize_t offset_;
 public:
-    Decrement(ssize_t offset) : ExpressionBase(), offset_(offset) {}
-    virtual ~Decrement() = default;
+    Decrement(ssize_t offset) : Expression(), offset_(offset) {}
     virtual void run(Runner& runner) const {runner.memory().dec(offset_);}
     virtual void extend() {++offset_;}
-    virtual MatcherPtr matcher() const {
-        return MatcherPtr(new ConcreteMatcher<Decrement>());
-    }
-    virtual bool matches(const ExpressionBase& other) const {
-        return other.matcher()->match(*this);
-    }
 };
 
-class Forward : public ExpressionBase
+class Forward : public Expression
 {
 private:
     ssize_t offset_;
 public:
-    Forward(ssize_t offset) : ExpressionBase(), offset_(offset) {}
-    virtual ~Forward() = default;
+    Forward(ssize_t offset) : Expression(), offset_(offset) {}
     virtual void run(Runner& runner) const {runner.memory().fwd(offset_);}
     virtual void extend() {++offset_;}
-    virtual MatcherPtr matcher() const {
-        return MatcherPtr(new ConcreteMatcher<Forward>());
-    }
-    virtual bool matches(const ExpressionBase& other) const {
-        return other.matcher()->match(*this);
-    }
 };
 
-class Backward : public ExpressionBase
+class Backward : public Expression
 {
 private:
     ssize_t offset_;
 public:
-    Backward(ssize_t offset) : ExpressionBase(), offset_(offset) {}
-    virtual ~Backward() = default;
+    Backward(ssize_t offset) : Expression(), offset_(offset) {}
     virtual void run(Runner& runner) const {runner.memory().bwd(offset_);}
     virtual void extend() {++offset_;}
-    virtual MatcherPtr matcher() const {
-        return MatcherPtr(new ConcreteMatcher<Backward>());
-    }
-    virtual bool matches(const ExpressionBase& other) const {
-        return other.matcher()->match(*this);
-    }
 };
 
-class Input : public ExpressionBase
+class Input : public Expression
 {
 public:
-    Input() : ExpressionBase() {}
-
-    virtual ~Input() = default;
-
     virtual void run(Runner& runner) const {
         runner.memory().write(getchar());
         if (runner.memory().read() == EOF)
             exit(0);
     }
-
-    virtual void extend() {}
-    virtual MatcherPtr matcher() const {
-        return MatcherPtr(new BaseMatcher());
-    }
-    virtual bool matches(const ExpressionBase& other) const {return false;}
 };
 
-class Output : public ExpressionBase
+class Output : public Expression
 {
 public:
-    Output() : ExpressionBase() {}
-
-    virtual ~Output() = default;
-
     virtual void run(Runner& runner) const {
         putchar(runner.memory().read()); 
         fflush(stdout); 
     }
-
-    virtual void extend() {}
-    virtual MatcherPtr matcher() const {
-        return MatcherPtr(new BaseMatcher());
-    }
-    virtual bool matches(const ExpressionBase& other) const {return false;}
 };
 
-class Loop : public ExpressionBase
+class Loop : public Expression
 {
 private:
     ExpressionVector children_;
 
 public:
     Loop(ExpressionVector &&children)
-     : ExpressionBase(),
+     : Expression(),
        children_(std::move(children)) {}
 
     Loop(const Loop&) = delete;
-
-    virtual ~Loop() = default;
 
     virtual void run(Runner& runner) const {
         while(runner.memory().read() > 0) {
             runner.run(children_);
         }
     }
-
-    virtual void extend() {}
-    virtual MatcherPtr matcher() const {
-        return MatcherPtr(new BaseMatcher());
-    }
-    virtual bool matches(const ExpressionBase& other) const {return false;}
 };
 
 using TokenVector = std::vector<char>;
@@ -274,7 +188,7 @@ ExpressionVector Parser::parse(TokenVector& tokens) {
         if (!next) {
             continue;
         } else if (expressions->empty() ||
-                  !expressions->back()->matches(*next)) {
+                  typeid(*expressions->back()) != typeid(*next)) {
             expressions->push_back(std::move(next));
         } else {
             expressions->back()->extend();
