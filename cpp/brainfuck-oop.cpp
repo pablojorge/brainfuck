@@ -54,7 +54,8 @@ public:
 
     virtual void run(Runner& runner) const = 0;
     virtual void accept(ExpressionVisitor& visitor) const = 0;
-    virtual void extend() {};
+    virtual bool repeatable() const {return false;}
+    virtual void repeat() {}
 };
 
 using ExpressionPtr = std::unique_ptr<Expression>;
@@ -85,7 +86,8 @@ public:
     Increment(ssize_t offset) : Expression(), offset_(offset) {}
     virtual void run(Runner& runner) const {runner.memory().inc(offset_);}
     virtual void accept(ExpressionVisitor& visitor) const {visitor.visit(*this);}
-    virtual void extend() {++offset_;}
+    virtual bool repeatable() const {return true;}
+    virtual void repeat() {++offset_;}
     ssize_t offset() const {return offset_;}
 };
 
@@ -97,7 +99,8 @@ public:
     Decrement(ssize_t offset) : Expression(), offset_(offset) {}
     virtual void run(Runner& runner) const {runner.memory().dec(offset_);}
     virtual void accept(ExpressionVisitor& visitor) const {visitor.visit(*this);}
-    virtual void extend() {++offset_;}
+    virtual bool repeatable() const {return true;}
+    virtual void repeat() {++offset_;}
     ssize_t offset() const {return offset_;}
 };
 
@@ -109,7 +112,8 @@ public:
     Forward(ssize_t offset) : Expression(), offset_(offset) {}
     virtual void run(Runner& runner) const {runner.memory().fwd(offset_);}
     virtual void accept(ExpressionVisitor& visitor) const {visitor.visit(*this);}
-    virtual void extend() {++offset_;}
+    virtual bool repeatable() const {return true;}
+    virtual void repeat() {++offset_;}
     ssize_t offset() const {return offset_;}
 };
 
@@ -121,7 +125,8 @@ public:
     Backward(ssize_t offset) : Expression(), offset_(offset) {}
     virtual void run(Runner& runner) const {runner.memory().bwd(offset_);}
     virtual void accept(ExpressionVisitor& visitor) const {visitor.visit(*this);}
-    virtual void extend() {++offset_;}
+    virtual bool repeatable() const {return true;}
+    virtual void repeat() {++offset_;}
     ssize_t offset() const {return offset_;}
 };
 
@@ -231,10 +236,11 @@ ExpressionVector Parser::parse(TokenVector& tokens) {
         if (!next) {
             continue;
         } else if (expressions->empty() ||
-                  typeid(*expressions->back()) != typeid(*next)) {
+                  typeid(*expressions->back()) != typeid(*next) ||
+                  !expressions->back()->repeatable()) {
             expressions->push_back(std::move(next));
         } else {
-            expressions->back()->extend();
+            expressions->back()->repeat();
         }
     }
 
@@ -385,7 +391,6 @@ public:
         program_.writes((unsigned char*)"\x48\xff\xc6", 3);
     }
     virtual void visit(const Loop& loop) {
-
         // 100000f27: 83 3f 00                     cmpl    $0, (%rdi)
         program_.writes((unsigned char*)"\x83\x3f\x00", 3);
         // 100000f6b: 0f 84 2f 00 00 00            je      47 <next_iter>
