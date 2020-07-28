@@ -18,19 +18,19 @@ read:
   pushq   %rdi
   movq    $0x02000003, %rax # SYS_read
   movq    %rdi, %rsi # buf
-  movq    $1, %rdi # fd
+  movq    $0, %rdi # stdin
   movq    $1, %rdx # buf_len
   syscall
   popq    %rdi
 
 write:
-  pushq   %rdi
+  pushq   %rdi              # save RDI
   movq    $0x02000004, %rax # SYS_write
-  movq    %rdi, %rsi # buf
-  movq    $1, %rdi # fd
-  movq    $1, %rdx # buf_len
-  syscall
-  popq    %rdi
+  movq    %rdi, %rsi        # set RDI as the 'buf'
+  movq    $1, %rdi          # fd: stdout
+  movq    $1, %rdx          # len: 1
+  syscall                   # execute the call
+  popq    %rdi              # restore RDI
 
 loop_start:
   cmpl    $0, (%rdi)
