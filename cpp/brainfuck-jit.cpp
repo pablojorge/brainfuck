@@ -7,78 +7,113 @@
 
 #include "brainfuck.h"
 
-
-// Sets a RX permission on the given memory, which must be page-aligned. Returns
-// 0 on success. On failure, prints out the error and returns -1.
-int make_memory_executable(void* m, size_t size) {
-  if (mprotect(m, size, PROT_READ | PROT_EXEC) == -1) {
-    perror("mprotect");
-    return -1;
-  }
-  return 0;
-}
-
-class JITProgram
+// Wraps an mmap()ed area, which starts with read/write permissions,
+// but that can be later turned into read/exec before execution.
+// This is good practice since the pages are never writable AND executable
+// _at the same_time_
+// (See https://eli.thegreenplace.net/2013/11/05/how-to-jit-an-introduction)
+class ExecutableBuffer
 {
 private:
-    uint8_t *program_, *ptr_;
+    uint8_t *buf_,
+            *ptr_;
     size_t size_;
 
 public:
-    JITProgram(size_t size) :
-      program_((uint8_t*) mmap(0, size,
-                   PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)),
-      ptr_(program_),
-      size_(size) {} // MAP_FAILED
-
-    ~JITProgram() {
-        munmap(program_, size_); // -1
+    ExecutableBuffer(size_t size) {
+        size_ = size;
+        buf_ = (uint8_t*) mmap(
+            0,
+            size_,
+            PROT_READ | PROT_WRITE,
+            MAP_PRIVATE | MAP_ANONYMOUS,
+            -1,
+            0
+        );
+        if (buf_ == MAP_FAILED) {
+            perror("mmap");
+            exit(1);
+        }
+        ptr_ = buf_;
+        memset(ptr_, 0x00, size);
     }
 
+    ~ExecutableBuffer() {
+        if(munmap(buf_, size_) == -1) {
+            perror("munmap");
+            exit(1);
+        }
+    }
+
+    void make_executable() {
+        if (mprotect(buf_, size_, PROT_READ | PROT_EXEC) == -1) {
+            perror("mprotect");
+            exit(1);
+        }
+    }
+
+    uint8_t* get_base () const { return buf_; }
     uint8_t* get_ptr () const { return ptr_; }
     void set_ptr (uint8_t* ptr) { ptr_ = ptr; }
 
     void writeb(uint8_t byte) {
+        // write a single byte
         (*ptr_++) = byte;
     }
 
     void writel(uint32_t value) {
+        // write a 4-bytes word, keeping endianness
         writes((uint8_t*)&value, 4);
     }
 
     void writes(const uint8_t* bytes, uint32_t size) {
+        // write an arbitrary-length series of bytes
         memcpy(ptr_, bytes, size);
         ptr_ += size;
     }
+};
+
+class JITProgram
+{
+private:
+    ExecutableBuffer &buf_;
+
+public:
+    JITProgram(ExecutableBuffer &buf)
+      : buf_(buf) {}
+
+    ExecutableBuffer& buffer() {return buf_;}
 
     void start() {
         // 0000000000000070 break:
         //       70: cc                            int3
-        // writeb(0xcc);
+        // buf_.writeb(0xcc);
     }
 
     void finish() {
         // 0000000000000071 finish:
         //       71: c3                            retq
-        writeb(0xc3);
+        buf_.writeb(0xc3);
     }
 
     void run() {
-        uint32_t memory_[30000];
-        memset(memory_, 0x00, sizeof(memory_));
+        uint32_t memory[30000];
+        memset(memory, 0x00, sizeof(memory));
 
-        make_memory_executable(program_, size_);
+        // Set the buffer as executable before attempting to jump
+        // into it:
+        buf_.make_executable();
 
-        // asm("int $3");
+        // Capture the buffer base ptr:
+        uint8_t* _base = buf_.get_base();
 
-        // http://www.ibiblio.org/gferg/ldp/GCC-Inline-Assembly-HOWTO.html
-        asm("movq %0, %%rdi"
-            :
-            : "r"(&memory_)
+        // Inject the address of the working memory in the rdi reg:
+        asm("movq %0, %%rdi\n":
+            : "r"(&memory)
             : "%rdi");
 
-        ((void (*)())program_)();
+        // Cast the base as a func pointer and jump to it:
+        ((void (*)()) _base)();
     }
 };
 
@@ -86,45 +121,49 @@ class JITCompiler : public ExpressionVisitor
 {
 private:
     JITProgram &program_;
-    std::vector<uint8_t*> stack;
+    ExecutableBuffer &buffer_;
+    std::vector<uint8_t*> stack_;
 
 public:
-    JITCompiler(JITProgram& program) : program_(program), stack() {}
+    JITCompiler(JITProgram &program)
+      : program_(program),
+        buffer_(program_.buffer()),
+        stack_() {}
 
     virtual void visit(const Increment& inc) {
         // 0000000000000000 increment:
         //        0: 48 c7 c0 01 00 00 00          movq    $1, %rax
         //        7: 01 07                         addl    %eax, (%rdi)
-        program_.writes((uint8_t*)"\x48\xc7\xc0", 3);
-        program_.writel(inc.offset());
-        program_.writes((uint8_t*)"\x01\x07", 2);        
+        buffer_.writes((uint8_t*)"\x48\xc7\xc0", 3);
+        buffer_.writel(inc.offset());
+        buffer_.writes((uint8_t*)"\x01\x07", 2);        
     }
 
     virtual void visit(const Decrement& dec) {
         // 0000000000000009 decrement:
         //        9: 48 c7 c0 01 00 00 00          movq    $1, %rax
         //       10: 29 07                         subl    %eax, (%rdi)
-        program_.writes((uint8_t*)"\x48\xc7\xc0", 3);
-        program_.writel(dec.offset());
-        program_.writes((uint8_t*)"\x29\x07", 2);
+        buffer_.writes((uint8_t*)"\x48\xc7\xc0", 3);
+        buffer_.writel(dec.offset());
+        buffer_.writes((uint8_t*)"\x29\x07", 2);
     }
 
     virtual void visit(const Forward& fwd) {
         // 0000000000000012 forward:
         //       12: 48 c7 c0 01 00 00 00          movq    $1, %rax
         //       19: 48 01 c7                      addq    %rax, %rdi
-        program_.writes((uint8_t*)"\x48\xc7\xc0", 3);
-        program_.writel(fwd.offset()*4);
-        program_.writes((uint8_t*)"\x48\x01\xc7", 3);
+        buffer_.writes((uint8_t*)"\x48\xc7\xc0", 3);
+        buffer_.writel(fwd.offset()*4);
+        buffer_.writes((uint8_t*)"\x48\x01\xc7", 3);
     }
 
     virtual void visit(const Backward& bwd) {
         // 000000000000001c backward:
         //       1c: 48 c7 c0 01 00 00 00          movq    $1, %rax
         //       23: 48 29 c7                      subq    %rax, %rdi
-        program_.writes((uint8_t*)"\x48\xc7\xc0", 3);
-        program_.writel(bwd.offset()*4);
-        program_.writes((uint8_t*)"\x48\x29\xc7", 3);
+        buffer_.writes((uint8_t*)"\x48\xc7\xc0", 3);
+        buffer_.writel(bwd.offset()*4);
+        buffer_.writes((uint8_t*)"\x48\x29\xc7", 3);
     }
 
     virtual void visit(const Input&) {
@@ -137,14 +176,14 @@ public:
         //       3f: 0f 05                         syscall
         //       41: 5f                            popq    %rdi        
 
-        program_.writeb(0x57);
-        program_.writes((uint8_t*)"\x48\xc7\xc0", 3);
-        program_.writel(0x02000003);
-        program_.writes((uint8_t*)"\x48\x89\xfe", 3);
-        program_.writes((uint8_t*)"\x48\xc7\xc7\x00\x00\x00\x00", 7);
-        program_.writes((uint8_t*)"\x48\xc7\xc2\x01\x00\x00\x00", 7);
-        program_.writes((uint8_t*)"\x0f\x05", 2);
-        program_.writeb(0x5f);
+        buffer_.writeb(0x57);
+        buffer_.writes((uint8_t*)"\x48\xc7\xc0", 3);
+        buffer_.writel(0x02000003);
+        buffer_.writes((uint8_t*)"\x48\x89\xfe", 3);
+        buffer_.writes((uint8_t*)"\x48\xc7\xc7\x00\x00\x00\x00", 7);
+        buffer_.writes((uint8_t*)"\x48\xc7\xc2\x01\x00\x00\x00", 7);
+        buffer_.writes((uint8_t*)"\x0f\x05", 2);
+        buffer_.writeb(0x5f);
     }
 
     virtual void visit(const Output&) {
@@ -157,57 +196,57 @@ public:
         //       5b: 0f 05                         syscall
         //       5d: 5f                            popq    %rdi
 
-        program_.writeb(0x57);
-        program_.writes((uint8_t*)"\x48\xc7\xc0", 3);
-        program_.writel(0x02000004);
-        program_.writes((uint8_t*)"\x48\x89\xfe", 3);
-        program_.writes((uint8_t*)"\x48\xc7\xc7\x01\x00\x00\x00", 7);
-        program_.writes((uint8_t*)"\x48\xc7\xc2\x01\x00\x00\x00", 7);
-        program_.writes((uint8_t*)"\x0f\x05", 2);
-        program_.writeb(0x5f);
+        buffer_.writeb(0x57);
+        buffer_.writes((uint8_t*)"\x48\xc7\xc0", 3);
+        buffer_.writel(0x02000004);
+        buffer_.writes((uint8_t*)"\x48\x89\xfe", 3);
+        buffer_.writes((uint8_t*)"\x48\xc7\xc7\x01\x00\x00\x00", 7);
+        buffer_.writes((uint8_t*)"\x48\xc7\xc2\x01\x00\x00\x00", 7);
+        buffer_.writes((uint8_t*)"\x0f\x05", 2);
+        buffer_.writeb(0x5f);
     }
 
     virtual void visit(const Loop& loop) {
         // 000000000000005e loop_start:
         //       5e: 83 3f 00                      cmpl    $0, (%rdi)
         //       61: 0f 84 00 00 00 00             je  0
-        program_.writes((uint8_t*)"\x83\x3f\x00", 3);
-        program_.writes((uint8_t*)"\x0f\x84", 2);
-        program_.writel(0); // reserve 4 bytes
+        buffer_.writes((uint8_t*)"\x83\x3f\x00", 3);
+        buffer_.writes((uint8_t*)"\x0f\x84", 2);
+        buffer_.writel(0); // reserve 4 bytes
 
-        // push current position to stack
-        stack.push_back(program_.get_ptr());
+        // Push current position to stack:
+        stack_.push_back(buffer_.get_ptr());
 
-        // recurse into subexpressions:
+        // Recurse into subexpressions:
         for(const auto &child: loop.children()) {
             child->accept(*this);
         }
 
-        // recover last position
-        uint8_t* after_loop_start = stack.back();
-        stack.pop_back();
+        // Recover last position:
+        uint8_t* after_loop_start = stack_.back();
+        stack_.pop_back();
 
         // 0000000000000067 loop_end:
         //       67: 83 3f 00                      cmpl    $0, (%rdi)
         //       6a: 0f 85 00 00 00 00             jne 0
-        program_.writes((uint8_t*)"\x83\x3f\x00", 3);
-        program_.writes((uint8_t*)"\x0f\x85", 2);
-        // calculate how much to jump back (consider the 4 bytes
+        buffer_.writes((uint8_t*)"\x83\x3f\x00", 3);
+        buffer_.writes((uint8_t*)"\x0f\x85", 2);
+        // Calculate how much to jump back (consider the 4 bytes
         // of the operand itself):
-        uint32_t jump_back = after_loop_start - program_.get_ptr() - 4;
-        // append the distance to the jump:
-        program_.writel(jump_back);
+        uint32_t jump_back = after_loop_start - buffer_.get_ptr() - 4;
+        // Append the distance to the jump:
+        buffer_.writel(jump_back);
 
-        // now calculate how much to jump forward in case we want
+        // Now calculate how much to jump forward in case we want
         // to skip the loop, to fill the pending jump:
-        uint8_t *after_loop_end = program_.get_ptr();
+        uint8_t *after_loop_end = buffer_.get_ptr();
         uint32_t jump_fwd = after_loop_end - after_loop_start;
 
-        // go back to the original position (-4), fill the pending
+        // Go back to the original position (-4), fill the pending
         // jump distance and get back to the the current pos:
-        program_.set_ptr(after_loop_start - 4);
-        program_.writel(jump_fwd);
-        program_.set_ptr(after_loop_end);
+        buffer_.set_ptr(after_loop_start - 4);
+        buffer_.writel(jump_fwd);
+        buffer_.set_ptr(after_loop_end);
     }
 
     void compile(const ExpressionVector& expressions) {
@@ -240,8 +279,10 @@ int main(int argc, char *argv[]) {
     try {
         auto expressions = Parser().parse(program);
 
-        JITProgram jit_program(1000000);
+        ExecutableBuffer buffer(1000000);
+        JITProgram jit_program(buffer);
         JITCompiler compiler(jit_program);
+
         compiler.compile(expressions);
 
         jit_program.run();
