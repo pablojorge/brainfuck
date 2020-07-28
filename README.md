@@ -69,18 +69,19 @@ Source: [c/brainfuck.c](c/brainfuck.c)
 
 ### C++
 
-C++ version, with improved optimizations (expression tree with compressed contiguous identical operations).
+There are currently two interpreters in different styles, and a JIT compiler (see <https://pablojorge.github.io/blog/2020/07/27/bf-jit-compiler-in-cpp.html>)
 
-Tested with Clang 11.0.3 and GCC 10.1.0.
+All tested with Clang 11.0.3 and GCC 10.1.0.
 
-Source: [cpp/brainfuck.cpp](cpp/brainfuck.cpp)
+See more in [cpp](cpp).
+
+Quick example:
 
     $ cd cpp
-    $ make brainfuck
-    c++ -std=c++14 -g -O3 brainfuck.cpp -o brainfuck
-    $ ./brainfuck ../programs/hello.bf
+    $ make brainfuck-jit
+    c++ -std=c++14 -g -O3 brainfuck-jit.cpp -o brainfuck-jit
+    $ ./brainfuck-jit ../programs/hello.bf
     Hello World!
-
 
 ### Golang
 
