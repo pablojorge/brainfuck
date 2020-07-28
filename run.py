@@ -233,7 +233,10 @@ class CPPGCC():
     def builder(self): return make.clean.all._args("CXX=g++-10")
 
 class CPPADT():
-    def runner(self): return command("./brainfuck")
+    def runner(self): return command("./brainfuck-adt")
+
+class CPPJIT():
+    def runner(self): return command("./brainfuck-jit")
 
 class CPPOOP():
     def runner(self): return command("./brainfuck-oop")
@@ -243,6 +246,10 @@ class CPPADTClang(CPPADT, CPPClang, Environment):
     def __init__(self):
         super().__init__("C++-ADT (Clang)", "./cpp")
 
+class CPPJITClang(CPPJIT, CPPClang, Environment):
+    def __init__(self):
+        super().__init__("C++-JIT (Clang)", "./cpp")
+
 class CPPOOPClang(CPPOOP, CPPClang, Environment):
     def __init__(self):
         super().__init__("C++-OOP (Clang)", "./cpp")
@@ -250,6 +257,10 @@ class CPPOOPClang(CPPOOP, CPPClang, Environment):
 class CPPADTGCC(CPPADT, CPPGCC, Environment):
     def __init__(self):
         super().__init__("C++-ADT (GCC)", "./cpp")
+
+class CPPJITGCC(CPPJIT, CPPGCC, Environment):
+    def __init__(self):
+        super().__init__("C++-JIT (GCC)", "./cpp")
 
 class CPPOOPGCC(CPPOOP, CPPGCC, Environment):
     def __init__(self):
@@ -349,8 +360,10 @@ def main():
     envs = [
         C(),
         CPPADTClang(),
+        CPPJITClang(),
         CPPOOPClang(),
         CPPADTGCC(),
+        CPPJITGCC(),
         CPPOOPGCC(),
         Rust(),
         Go(),
