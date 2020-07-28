@@ -250,6 +250,7 @@ ExpressionVector Parser::parse(TokenVector& tokens) {
 }
 
 #include <sys/mman.h>
+#include <cstring>
 
 void* alloc_writable_memory(size_t size) {
   void* ptr = mmap(0, size,
@@ -277,14 +278,12 @@ class JITProgram
 private:
     unsigned char *program_, *ptr_;
     unsigned int mem[30000];
-    unsigned char output[1000000];
 
 public:
     JITProgram() {
         program_ = (unsigned char*)alloc_writable_memory(1000000);
         ptr_ = program_;
         memset(mem, 0x00, sizeof(mem));
-        memset(output, 0x00, sizeof(output));
     }
 
     unsigned char* ptr () const { return ptr_; }
@@ -340,15 +339,7 @@ public:
             : "r"(&mem)
             : "%rdi");
 
-        asm("movq %0, %%rsi"
-            :
-            : "r"(&output)
-            : "%rsi");
-
         ((void (*)())program_)();
-
-        // asm("int $3");
-        std::cout << (char*) output;
     }
 };
 
@@ -381,14 +372,42 @@ public:
         program_.writes((unsigned char*)"\x48\x29\xc7", 3);
     }
     virtual void visit(const Input&) {
+        // mov rax, 0x2000004     ; sys_write call identifier
+        // mov rdi, 1             ; STDOUT file descriptor
+        // mov rsi, myMessage     ; buffer to print
+        // mov rdx, myMessageLen  ; length of buffer
+        // syscall                ; make the system call
+
+        program_.writeb(0x57);
+        program_.movl_rax(0x02000003);
+        program_.writes((unsigned char*)"\x48\x89\xfe", 3);
+        program_.writes((unsigned char*)"\x48\xc7\xc7\x00\x00\x00\x00", 7);
+        program_.writes((unsigned char*)"\x48\xc7\xc2\x01\x00\x00\x00", 7);
+        program_.writes((unsigned char*)"\x0f\x05", 2);
+        program_.writeb(0x5f);
     }
     virtual void visit(const Output&) {
-        // 100000f12: 8a 27                        movb    (%rdi), %ah
-        program_.writes((unsigned char*)"\x8a\x27", 2);
-        // 100000f14: 88 26                        movb    %ah, (%rsi)
-        program_.writes((unsigned char*)"\x88\x26", 2);
-        // 100000f16: 48 ff c6                     incq    %rsi
-        program_.writes((unsigned char*)"\x48\xff\xc6", 3);
+        // $ objdump -d /usr/lib/system/libsystem_kernel.dylib
+        // _read:
+        // 1814:       b8 03 00 00 02  movl    $33554435, %eax
+        // _write:
+        // 3bec:       b8 04 00 00 02  movl    $33554436, %eax
+
+        // 100000efd: 57                           pushq   %rdi
+        // 100000efe: 48 c7 c0 04 00 00 02         movq    $33554436, %rax # SYS_write
+        // 100000f0c: 48 89 fe                     movq    %rdi, %rsi # buf
+        // 100000f05: 48 c7 c7 01 00 00 00         movq    $1, %rdi # fd
+        // 100000f0f: 48 c7 c2 01 00 00 00         movq    $1, %rdx # buf_len
+        // 100000f16: 0f 05                        syscall
+        // 100000f18: 5f                           popq    %rdi
+
+        program_.writeb(0x57);
+        program_.movl_rax(0x02000004);
+        program_.writes((unsigned char*)"\x48\x89\xfe", 3);
+        program_.writes((unsigned char*)"\x48\xc7\xc7\x01\x00\x00\x00", 7);
+        program_.writes((unsigned char*)"\x48\xc7\xc2\x01\x00\x00\x00", 7);
+        program_.writes((unsigned char*)"\x0f\x05", 2);
+        program_.writeb(0x5f);
     }
     virtual void visit(const Loop& loop) {
         // 100000f27: 83 3f 00                     cmpl    $0, (%rdi)
