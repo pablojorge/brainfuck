@@ -9,6 +9,12 @@ all: $(ALL)
 %: %.cpp
 	$(CXX) $(CXXFLAGS) $< -o $@
 
+%.o: %.s
+	as -arch x86_64 $< -o $@
+
+dump: brainfuck.o
+	objdump -dS ./brainfuck.o
+
 debug: brainfuck-jit
 	lldb -s lldb-commands.txt ./brainfuck-jit -- test.bf
 

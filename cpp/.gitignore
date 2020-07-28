@@ -1,4 +1,5 @@
 brainfuck-adt
 brainfuck-oop
 brainfuck-jit
+*.o
 *.dSYm

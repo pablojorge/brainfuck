@@ -3,7 +3,6 @@
 # display register read
 r
 # c
-#disas -s &jit_program.program_ -c 50
 p &mem
 x $0
 disas -b -s program_ -c 20
