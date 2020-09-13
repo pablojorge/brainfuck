@@ -271,7 +271,14 @@ class Rust(Environment):
         super().__init__("Rust", "./rust")
 
     def builder(self): return cargo.build
-    def runner(self): return cargo.run
+    def runner(self): return command("./target/debug/main")
+
+class RustJIT(Environment):
+    def __init__(self):
+        super().__init__("RustJIT", "./rust")
+
+    def builder(self): return cargo.build
+    def runner(self): return command("./target/debug/jit")
 
 class Go(Environment):
     def __init__(self):
@@ -366,6 +373,7 @@ def main():
         CPPJITGCC(),
         CPPOOPGCC(),
         Rust(),
+        RustJIT(),
         Go(),
         PyPy(),
     ]
