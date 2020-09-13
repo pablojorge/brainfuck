@@ -171,7 +171,7 @@ public:
         //       26: 57                            pushq   %rdi
         //       27: 48 c7 c0 03 00 00 02          movq    $33554435, %rax
         //       2e: 48 89 fe                      movq    %rdi, %rsi
-        //       31: 48 c7 c7 01 00 00 00          movq    $1, %rdi
+        //       31: 48 c7 c7 00 00 00 00          movq    $0, %rdi
         //       38: 48 c7 c2 01 00 00 00          movq    $1, %rdx
         //       3f: 0f 05                         syscall
         //       41: 5f                            popq    %rdi        

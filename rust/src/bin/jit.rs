@@ -50,7 +50,7 @@ fn compile(expressions: &Vec<bf::Expression>, stream: &mut InstructionStream) {
              bf::Expression::OutputValue => {
                 stream.emit_bytes(b"\x48\xc7\xc0");
                 stream.emit_double_word(0x02000004);
-                stream.emit_bytes(b"\x48\xc7\xc7\x00\x00\x00\x00");
+                stream.emit_bytes(b"\x48\xc7\xc7\x01\x00\x00\x00");
                 stream.emit_bytes(b"\x48\xc7\xc2\x01\x00\x00\x00");
                 stream.emit_bytes(b"\x0f\x05");
              },
@@ -62,7 +62,7 @@ fn compile(expressions: &Vec<bf::Expression>, stream: &mut InstructionStream) {
              bf::Expression::InputValue => {
                 stream.emit_bytes(b"\x48\xc7\xc0");
                 stream.emit_double_word(0x02000003);
-                stream.emit_bytes(b"\x48\xc7\xc7\x01\x00\x00\x00");
+                stream.emit_bytes(b"\x48\xc7\xc7\x00\x00\x00\x00");
                 stream.emit_bytes(b"\x48\xc7\xc2\x01\x00\x00\x00");
                 stream.emit_bytes(b"\x0f\x05");
              },
