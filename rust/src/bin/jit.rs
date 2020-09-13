@@ -70,13 +70,16 @@ fn compile(expressions: &Vec<bf::Expression>, stream: &mut InstructionStream) {
                 let loop_start = stream.create_label();
                 let post_loop = stream.create_label();
 
-                // 51: 83 3e 00                      cmpl    $0, (%rsi)
+                //   48: 83 3e 00                      cmpl    $0, (%rsi)
+                //   4b: 0f 84 00 00 00 00             je  0 <loop_end>
                 stream.emit_bytes(b"\x83\x3e\x00");
                 stream.jz_Label_1(post_loop);       // --*
                 stream.attach_label(loop_start);    // <-|-*
                                                     //   | |
                 compile(sub_exp, stream);           //   | |
                                                     //   | |
+                //   51: 83 3e 00  cmpl $0, (%rsi)  //   | |
+                //   54: 0f 85 00 00 00 00  jne 0   //   | |
                 stream.emit_bytes(b"\x83\x3e\x00"); //   | |
                 stream.jnz_Label_1(loop_start);     // --|-*
                 stream.attach_label(post_loop);     // <-*
@@ -85,14 +88,32 @@ fn compile(expressions: &Vec<bf::Expression>, stream: &mut InstructionStream) {
     }
 }
 
+fn opcodes_size(stats: &bf::Stats) -> usize {
+    return     7 * stats.fwd_count +
+               7 * stats.bwd_count +
+               6 * stats.inc_count +
+               6 * stats.dec_count +
+              23 * stats.output_count +
+              23 * stats.input_count + 
+           9 * 2 * stats.loop_count;
+}
+
 fn run(expressions: &Vec<bf::Expression>) {
-    let mut memory_map = ExecutableAnonymousMemoryMap::new(100000, false, false).unwrap();
+    let stats = bf::stats(expressions);
+
+    let mem_size = opcodes_size(&stats) 
+                    + 1  // retq
+                    + 8; // stream buffer
+
+    let mut memory_map = ExecutableAnonymousMemoryMap::new(mem_size,
+                                                           false,
+                                                           false).unwrap();
     let mut instruction_stream = memory_map.instruction_stream(
         &InstructionStreamHints {
-            number_of_labels: 100000,
-            number_of_8_bit_jumps: 100000,
-            number_of_32_bit_jumps: 100000,
-            number_of_emitted_labels: 100000
+            number_of_labels: stats.loop_count * 2,
+            number_of_8_bit_jumps: 0,
+            number_of_32_bit_jumps: stats.loop_count * 2,
+            number_of_emitted_labels: 0
         }
     );
 

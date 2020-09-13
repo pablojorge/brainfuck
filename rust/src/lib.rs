@@ -1,4 +1,5 @@
 use std;
+use std::ops::Add;
 use std::io::{self, prelude::*};
 use std::convert::TryInto;
 
@@ -287,4 +288,57 @@ fn do_run(expressions: &Vec<Expression>, mem: &mut Buffer<u32>)
     }
 
     Ok(())
+}
+
+#[derive(Debug, Default)]
+pub struct Stats {
+    pub fwd_count: usize,
+    pub bwd_count: usize,
+    pub inc_count: usize,
+    pub dec_count: usize,
+    pub output_count: usize,
+    pub input_count: usize,
+    pub loop_count: usize
+}
+
+impl Add for Stats {
+    type Output = Stats;
+
+    fn add(self: Stats, other: Stats) -> Stats {
+        Stats {
+            fwd_count: self.fwd_count + other.fwd_count,
+            bwd_count: self.bwd_count + other.bwd_count,
+            inc_count: self.inc_count + other.inc_count,
+            dec_count: self.dec_count + other.dec_count,
+            output_count: self.output_count + other.output_count,
+            input_count: self.input_count + other.input_count,
+            loop_count: self.loop_count + other.loop_count
+        }
+    }
+}
+
+pub fn stats(expressions: &Vec<Expression>) -> Stats {
+    let mut acc = Stats {..Default::default()};
+
+    for expression in expressions {
+        match expression {
+            Expression::MoveForward(_) => acc.fwd_count += 1,
+            Expression::MoveBack(_)    => acc.bwd_count += 1,
+            Expression::IncValue(_)    => acc.inc_count += 1,
+            Expression::DecValue(_)    => acc.dec_count += 1,
+            Expression::OutputValue    => acc.output_count += 1,
+            Expression::InputValue     => acc.input_count += 1,
+            Expression::Loop(_)        => acc.loop_count += 1,
+        }
+    }
+
+    expressions
+        .iter()
+        .fold(
+            acc,
+            |acc, x| match x {
+                Expression::Loop(sub_exp) => acc + stats(sub_exp), 
+                _ => acc
+            }
+        )
 }
