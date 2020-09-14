@@ -134,7 +134,7 @@ fn run(expressions: &Vec<bf::Expression>) {
     let memory = [0u32; 30000];
 
     unsafe {
-        // point RSI to thee buffer:
+        // point RSI to the buffer:
         asm!(
             "movq {mem}, %rsi",
             mem = in (reg) &memory,

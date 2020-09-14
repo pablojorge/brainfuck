@@ -1,11 +1,8 @@
 # https://lldb.llvm.org/use/map.html
 b JITProgram::run
-# display register read
 r
 p &memory
 x $0
 p buf_.buf_
 x $1
 disas -b -s $1 -c 40
-# c
-# x $0

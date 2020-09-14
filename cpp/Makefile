@@ -19,4 +19,4 @@ debug: brainfuck-jit
 	lldb -s lldb-commands.txt ./brainfuck-jit -- test.bf
 
 clean:
-	rm -rf $(ALL) *.o
+	rm -rf $(ALL) *.o *.dSYM

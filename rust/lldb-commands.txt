@@ -1,0 +1,12 @@
+b 136
+r
+p &memory
+x $0
+reg read rsi rip
+n
+reg read rsi rip
+p function_pointer
+si
+reg read rsi rip
+disas -b -s $1 -c 40
+x $0
