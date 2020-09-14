@@ -10,7 +10,7 @@ A collection of [brainfuck](http://www.muppetlabs.com/~breadbox/bf/) interpreter
     - [asm](#asm)
     - [C](#c)
     - [C++](#c-1)
-    - [Golang](#go) (contributed by [Philip K.](https://github.com/phikal))
+    - [Golang](#golang) (contributed by [Philip K.](https://github.com/phikal))
     - [Haskell](#haskell)
     - [Javascript](#javascript)
     - [Lua](#lua) (contributed by [François Perrad](https://github.com/fperrad))
@@ -210,6 +210,8 @@ To use the JIT-enabled version: (thanks [Gsam](https://github.com/GSam) for the 
 Interpreter source: [rust/src/lib.rs](rust/src/lib.rs). Includes improved optimizations (compressing identical contiguous operations)
 
 Translator source: [rust/src/bin/translate.rs](rust/src/bin/translate.rs). Supports translating to Rust and C.
+
+JIT version: [rust/src/bin/jit.rs](rust/src/bin/jit.rs). See <https://pablojorge.github.io/blog/2020/09/13/bf-jit-compiler-in-rust.html>.
 
 To run the interpreter:
 
