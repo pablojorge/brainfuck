@@ -122,13 +122,11 @@ class JITCompiler : public ExpressionVisitor
 private:
     JITProgram &program_;
     ExecutableBuffer &buffer_;
-    std::vector<uint8_t*> stack_;
 
 public:
     JITCompiler(JITProgram &program)
       : program_(program),
-        buffer_(program_.buffer()),
-        stack_() {}
+        buffer_(program_.buffer()) {}
 
     virtual void visit(const Increment& inc) {
         // 0000000000000000 increment:
@@ -214,17 +212,13 @@ public:
         buffer_.writes((uint8_t*)"\x0f\x84", 2);
         buffer_.writel(0); // reserve 4 bytes
 
-        // Push current position to stack:
-        stack_.push_back(buffer_.get_ptr());
+        // Save current position:
+        uint8_t *after_loop_start = buffer_.get_ptr();
 
         // Recurse into subexpressions:
         for(const auto &child: loop.children()) {
             child->accept(*this);
         }
-
-        // Recover last position:
-        uint8_t* after_loop_start = stack_.back();
-        stack_.pop_back();
 
         // 0000000000000067 loop_end:
         //       67: 83 3f 00                      cmpl    $0, (%rdi)
