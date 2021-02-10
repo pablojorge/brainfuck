@@ -1,6 +1,6 @@
 # Brainf\*ck
 
-A collection of [brainfuck](http://www.muppetlabs.com/~breadbox/bf/) interpreters/translators. 
+A collection of [brainfuck](http://www.muppetlabs.com/~breadbox/bf/) interpreters/translators in [C](#c)/[C++](#c-1)/[asm](#asm)/[Javascript](#javascript)/[Python](#python)/[Rust](#rust) + others. The JS version includes an interactive ["IDE"](http://pablojorge.github.io/brainfuck/) that lets you choose between a pure JS or a [Wasm](./pablojorge/brainfuck/blob/master/wasm) engine. There are two JIT implementations: in [C++ ](https://pablojorge.github.io/blog/2020/07/27/bf-jit-compiler-in-cpp.html) and [Rust](https://pablojorge.github.io/blog/2020/09/13/bf-jit-compiler-in-rust.html).
 
 ## Contents
 
